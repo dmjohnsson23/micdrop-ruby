@@ -37,7 +37,7 @@ module Micdrop
     # Create a new item context with the same value as exists currently. Allows operations in a
     # scope that will not affect the value in the current scope.
     def scope(&block)
-      ctx = ItemContext.new(@parent, @value)
+      ctx = ItemContext.new(@record, @value)
       ctx.apply block
       ctx
     end
@@ -46,24 +46,26 @@ module Micdrop
     #
     # Can be used to take slices of arrays as well
     def extract(name)
+      return if @value.nil?
+
       @value = @value[name]
     end
 
-    ### Parent passthru ###
+    ### record passthru ###
 
     def put(name)
       # TODO: allow second parameter with different value
-      @parent.put name, @value
+      @record.put name, @value
     end
 
     def skip
       # TODO
-      @parent.skip
+      @record.skip
     end
 
     def stop
       # TODO
-      @parent.stop
+      @record.stop
     end
 
     # TODO: should we passthru `take`?

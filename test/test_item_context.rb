@@ -200,14 +200,25 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  describe :slice do
+  describe :extract do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.slice 2, 5
+      ctx.extract 2
 
       _(ctx.value).must_be_nil
     end
-    it "slices an array"
+    it "extracts a single item from an array" do
+      ctx = Micdrop::ItemContext.new(nil, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+      ctx.extract 2
+
+      _(ctx.value).must_equal 3
+    end
+    it "slices an array with a range" do
+      ctx = Micdrop::ItemContext.new(nil, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+      ctx.extract 2..4
+
+      _(ctx.value).must_equal [3, 4, 5]
+    end
   end
 
   describe :default do

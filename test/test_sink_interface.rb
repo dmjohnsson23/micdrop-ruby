@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 require_relative "test_helper"
 
 module IsSink
-  def self.included(base)
+  def self.included(_base) # rubocop:disable Metrics/MethodLength
     describe "Sink" do
-      it "responds to push" do
-        _(@object).must_respond_to :push
+      it "responds to <<" do
+        _(@object).must_respond_to :<<
       end
       it "responds to make_collector" do
         _(@object).must_respond_to :make_collector
@@ -18,7 +20,6 @@ module IsSink
     end
   end
 end
-
 
 describe "ArraySink" do
   include IsSink

@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
+# Represets
 module Micdrop
-  class MigrateContext
+  class RecordContext
     def initialize(source, sink, loop_item, loop_index = nil)
       @source = source
       @sink = sink

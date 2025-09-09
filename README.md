@@ -9,7 +9,7 @@ Extensible framework/library to migrate data from source to another using a more
 At its core, the library's operation is quite simple: loop over the rows of the source data, perform some transformations, and output the transformed data to the sink.
 
 ```ruby
-migrate CsvSource.new('data_source.csv'), TableInsertSink.new('destination') do
+migrate CSV.read('data_source.csv', headers:true), TableInsertSink.new('destination') do
     take 'Name', put: :name
     take 'Birth Date' do
         parse_date '%m/%d/%y'
@@ -55,6 +55,19 @@ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
 ```
 
 ## Usage
+
+Before we can begin a migration, we need a source and a sink.
+
+Essensially, any Ruby object which meets the following criteria can be used as a source:
+
+* The object responds to `:each`, `:each_with_index`, and/or `:each_pair` (so, any `Enumerator` works)
+* The items yieled by `:each` and friends respond to `:[]`
+
+A sink is similar, but has a single criteria: it must respond to `:<<`.
+
+By default, the `:<<` method of the sink will receive a hash. However, if another object is needed, 
+the sink may optionally implement `:make_collector` to return another object instead. The collector 
+must respond to `:[]=` but otherwise may be any object you wish.
 
 Let's begin with the simplest possible migration:
 

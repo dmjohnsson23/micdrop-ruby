@@ -2,7 +2,7 @@
 
 require_relative "micdrop/array_sink"
 require_relative "micdrop/item_context"
-require_relative "micdrop/migrate_context"
+require_relative "micdrop/record_context"
 require_relative "micdrop/version"
 
 module Micdrop
@@ -20,15 +20,13 @@ module Micdrop
         migrate_item_helper(from, to, loop_item, loop_index, &block)
       end
     else
-      # TODO error
+      # TODO: error
     end
   end
 
-  private
-
   def self.migrate_item_helper(from, to, loop_item, loop_index, &block)
-    ctx = MigrateContext.new(from, to, loop_item, loop_index)
+    ctx = RecordContext.new(from, to, loop_item, loop_index)
     ctx.instance_eval(&block)
-    ctx.flush reset:false # No need to reset; item processing is done
+    ctx.flush reset: false # No need to reset; item processing is done
   end
 end

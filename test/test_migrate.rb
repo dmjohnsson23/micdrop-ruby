@@ -77,4 +77,36 @@ class TestMicdrop < Minitest::Test
       { "A" => 6, "B" => 12 }
     ], @sink
   end
+
+  def test_no_double_flush
+    Micdrop.migrate @source, @sink do
+      take :a, put: "A"
+      take :b, put: "B"
+      flush
+    end
+
+    assert_equal [
+      { "A" => 1, "B" => 2 },
+      { "A" => 3, "B" => 4 },
+      { "A" => 5, "B" => 6 }
+    ], @sink
+  end
+
+  def test_multi_flush # rubocop:disable Metrics/MethodLength
+    Micdrop.migrate @source, @sink do
+      %i[a b].each do |name|
+        take name, put: :it
+        flush
+      end
+    end
+
+    assert_equal [
+      { it: 1 },
+      { it: 2 },
+      { it: 3 },
+      { it: 4 },
+      { it: 5 },
+      { it: 6 }
+    ], @sink
+  end
 end

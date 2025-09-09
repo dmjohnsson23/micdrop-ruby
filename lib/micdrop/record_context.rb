@@ -26,6 +26,7 @@ module Micdrop
 
     def put(name, value)
       @collector[name] = value
+      @dirty = true
     end
 
     def collect_list(*items, put: nil, convert: nil, apply: nil, &block)
@@ -34,11 +35,14 @@ module Micdrop
     end
 
     def flush(reset: true)
+      return unless @dirty
+
       @sink << @collector
       self.reset if reset
     end
 
     def reset
+      @dirty = false
       @collector = if @sink.respond_to? :make_collector
                      @sink.make_collector
                    else

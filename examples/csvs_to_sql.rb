@@ -193,29 +193,25 @@ source = CSV.read "data/customers-100.csv", headers: true
 sink = Micdrop::Ext::Sequel::InsertSink.new DB[:client_contact_phones]
 
 Micdrop.migrate source, sink do
-  take "Index" do
-    parse_int
-    lookup client_contact_lookup
-    put :client_contact_id
-  end
-  put :type, "Other"
-  # There is a "Phone 1" and "Phone 2" in the source, but the destination requires separare records for each. We'll do
-  # Phone 1 first.
-  take "Phone 1" do
-    skip if value == ""
-    put :display
-    # We don't have to end a block wtih put; we can put multiple values from the same put if needed
-    string_replace(/[^0-9]/, "")
-    put :search
-  end
-  # Now we can insert the first of the two phone number records. Normally the collector would be reset when flushing,
-  # but here for convenience we'll prevent that. After all, only one value is different in the second record, so it
-  # makes more sense to just overwrite that value rather than start with a blank slate.
-  flush reset: false
-  take "Phone 2" do
-    skip if value == ""
-    put :display
-    string_replace(/[^0-9]/, "")
-    put :search
+  # There is a "Phone 1" and "Phone 2" in the source, but the destination requires separare records for each.
+  for colname in["Phone 1", "Phone 2"] do
+    # These values are the same for every iteration
+    take "Index" do
+      parse_int
+      lookup client_contact_lookup
+      put :client_contact_id
+    end
+    put :type, "Other"
+    # But here we take a different column each time
+    take colname do
+      skip if value == ""
+      put :display
+      # We don't have to end a block with put; we can put multiple values from the same block if needed
+      string_replace(/[^0-9]/, "")
+      put :search
+    end
+    # Since we are inserting multiple records, it's important to flush after creating each. This creates the record in
+    # the destination, and resets the collector for the next iteration.
+    flush
   end
 end

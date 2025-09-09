@@ -187,6 +187,8 @@ Micdrop.migrate source, sink do
   take "Country", put: :country
 end
 
+# This example shows a much more complex case.
+#
 # Sometimes, one record in the source data may need to turn into multiple records in the destination. You can achieve
 # this by flushing to the sink, which will create a desination record and reset, but maintain the same source record.
 source = CSV.read "data/customers-100.csv", headers: true
@@ -194,7 +196,7 @@ sink = Micdrop::Ext::Sequel::InsertSink.new DB[:client_contact_phones]
 
 Micdrop.migrate source, sink do
   # There is a "Phone 1" and "Phone 2" in the source, but the destination requires separare records for each.
-  for colname in["Phone 1", "Phone 2"] do
+  ["Phone 1", "Phone 2"].each do |colname|
     # These values are the same for every iteration
     take "Index" do
       parse_int
@@ -204,11 +206,19 @@ Micdrop.migrate source, sink do
     put :type, "Other"
     # But here we take a different column each time
     take colname do
-      skip if value == ""
-      put :display
-      # We don't have to end a block with put; we can put multiple values from the same block if needed
-      string_replace(/[^0-9]/, "")
-      put :search
+      # Note that we can't use `skip` here, or both records would potentially be skipped. We have to use our own logic.
+      # (This should be improved in the future.)
+      if value == ""
+        # Reset will clear the collector. So long is there are no puts between the reset and the ending flush, nothing
+        # will be inserted into the database.
+        reset
+      else
+        put :display
+        # We don't have to close a block after the first put; mutiple puts are allowed if an item needs to be put in
+        # multiple places.
+        string_replace(/[^0-9]/, "")
+        put :search
+      end
     end
     # Since we are inserting multiple records, it's important to flush after creating each. This creates the record in
     # the destination, and resets the collector for the next iteration.

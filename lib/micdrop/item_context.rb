@@ -72,12 +72,26 @@ module Micdrop
 
     ### Debug transformers ###
 
+    # Debug tool to print the current value to the console
     def inspect
       puts @value
     end
 
     ### Basic transformers ###
 
+    def parse_int(base = 10)
+      return if @value.nil?
+
+      @value = @value.to_i(base)
+    end
+
+    def parse_float
+      return if @value.nil?
+
+      @value = @value.to_f
+    end
+
+    # Parse a date using a given format string
     def parse_date(format = "%Y-%m-%d", zero_date: false)
       if zero_date
         zero = make_zero_date format
@@ -86,6 +100,7 @@ module Micdrop
       @value = ::Date.strptime(@value, format) unless @value.nil?
     end
 
+    # Parse a datetime using a given format string
     def parse_datetime(format = "%Y-%m-%d %H:%M:%S", zero_date: false)
       if zero_date
         zero = make_zero_date format
@@ -94,6 +109,7 @@ module Micdrop
       @value = ::DateTime.strptime(@value, format) unless @value.nil?
     end
 
+    # Format a date using a given format string
     def format_date(format = "%Y-%m-%d", zero_date: false)
       if @value.nil? && zero_date
         @value = make_zero_date format
@@ -102,6 +118,7 @@ module Micdrop
       end
     end
 
+    # Format a datetime using a given format string
     def format_datetime(format = "%Y-%m-%d %H:%M:%S", zero_date: false)
       if @value.nil? && zero_date
         @value = make_zero_date format
@@ -110,6 +127,7 @@ module Micdrop
       end
     end
 
+    # Parse a value into a boolean using a list of common values for true or false
     def parse_boolean(true_values = [1, "1", "true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"],
                       false_values = [0, "0", "false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF", ""])
       if true_values.include? @value
@@ -123,6 +141,7 @@ module Micdrop
       end
     end
 
+    # Format a boolean as a string
     def format_boolean(true_value = "Yes", false_value = "No")
       if @value.nil?
         nil
@@ -133,6 +152,18 @@ module Micdrop
       end
     end
 
+    # Format the value into a string using sprintf-style formatting, or using `to_s` if no template is provided.
+    def format_string(template = nil)
+      return if @value.nil?
+
+      @value = if template.nil?
+                 @value.to_s
+               else
+                 template % @value
+               end
+    end
+
+    # Lookup the value in a hash
     def lookup(mapping, pass_if_not_found: false)
       return if @value.nil?
 
@@ -141,16 +172,20 @@ module Micdrop
       end
     end
 
+    # Perform a string replacement or regex replacement on the current value
     def string_replace(find, replace)
       @value = @value.gsub find, replace unless value.nil?
     end
 
+    # Provide a default value if the current value is nill
     def default(default_value)
       @value = default_value if @value.nil?
     end
 
     ### String (de)structuring ###
 
+    # Split a string according to a delimeter. Accepts an optional block in the record context of the newly created list
+    # of values.
     def split(delimiter, &block)
       return if @value.nil?
 
@@ -158,10 +193,13 @@ module Micdrop
       enter(&block) unless block.nil?
     end
 
+    # Join a list into a string
     def join(delimiter)
       @value = @value.join(delimiter) unless @value.nil?
     end
 
+    # Split a string into a set of key/value pairs (as a hash) according to a set of delimiters. Accepts an optional
+    # block in the record context of the newly created hash of values.
     def split_kv(kv_delimiter, item_delimiter = "\n", &block)
       return if @value.nil?
 
@@ -174,6 +212,7 @@ module Micdrop
       enter(&block) unless block.nil?
     end
 
+    # Join a hash into a string
     def join_kv(kv_delimiter, item_delimiter = "\n")
       return if @value.nil?
 
@@ -185,7 +224,7 @@ module Micdrop
       @value = @value.join(delimiter)
     end
 
-    # TODO: JSON and Regex
+    # TODO: JSON and Regex match
 
     private
 

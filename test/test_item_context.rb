@@ -185,6 +185,47 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe :format_string do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      ctx.format_string "%s"
+
+      _(ctx.value).must_be_nil
+    end
+
+    it "formats a string" do
+      ctx = Micdrop::ItemContext.new(nil, 1)
+      ctx.format_string "%s"
+
+      _(ctx.value).must_equal "1"
+    end
+  end
+
+  describe :lookup do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      ctx.lookup({ "A" => 1, "B" => 2 })
+
+      _(ctx.value).must_be_nil
+    end
+
+    it "converts a known value" do
+      ctx = Micdrop::ItemContext.new(nil, "A")
+      ctx.lookup({ "A" => 1, "B" => 2 })
+
+      _(ctx.value).must_equal 1
+    end
+
+    it "optionally passes the original value on an unknown value" do
+      ctx = Micdrop::ItemContext.new(nil, "C")
+      ctx.lookup({ "A" => 1, "B" => 2 }, pass_if_not_found: true)
+
+      _(ctx.value).must_equal "C"
+    end
+
+    it "behaves appropriately when passed an unknown value"
+  end
+
   describe :string_replace do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
@@ -198,6 +239,8 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
 
       _(ctx.value).must_equal "bininis"
     end
+
+    it "works with regex"
   end
 
   describe :extract do

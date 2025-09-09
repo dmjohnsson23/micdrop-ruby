@@ -54,7 +54,6 @@ module Micdrop::Ext
           dataset = dataset.where(**{ col => collector[col] })
         end
         existing = dataset.first
-        puts existing, dataset
         if existing.nil?
           dataset.insert(**collector)
         else

@@ -16,3 +16,7 @@ group :sequel, optional: true do
   gem "sequel", "~> 5.96"
   gem "sqlite3", "~> 2.7"
 end
+
+group :csv, optional: true do
+  gem "csv", "~> 3.3"
+end

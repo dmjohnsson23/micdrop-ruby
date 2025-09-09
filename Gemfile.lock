@@ -8,6 +8,7 @@ GEM
   specs:
     ast (2.4.3)
     bigdecimal (3.2.3)
+    csv (3.3.5)
     date (3.4.1)
     erb (5.0.2)
     io-console (0.8.1)
@@ -66,6 +67,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  csv (~> 3.3)
   irb
   micdrop!
   minitest (~> 5.16)

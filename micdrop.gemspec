@@ -8,15 +8,18 @@ Gem::Specification.new do |spec|
   spec.authors = ["Dominick Johnson"]
   spec.email = ["dominick.johnson@tylertech.com"]
 
-  spec.summary = "TODO: Write a short summary, because RubyGems requires one."
-  spec.description = "TODO: Write a longer description or delete this line."
+  spec.summary = "Utility library for application data migrations, imports, and conversions"
+  spec.description = "Migrate data from a legacy application to a new application, write scripts "\
+    "to import data from third-party applications, or convert data into the format your application "\
+    "expects--all in a flexible, declaritive syntax. Works with tabular data, such as CSV or "\
+    "database tables, with support for structured formats such as JSON as well."
   spec.homepage = "TODO: Put your gem's website or public repo URL here."
   spec.required_ruby_version = ">= 3.1.0"
 
   spec.metadata["allowed_push_host"] = "TODO: Set to your gem server 'https://example.com'"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "TODO: Put your gem's public repo URL here."
+  spec.metadata["source_code_uri"] = "https://github.com/dmjohnsson23/micdrop-ruby"
   spec.metadata["changelog_uri"] = "TODO: Put your gem's CHANGELOG.md URL here."
 
   # Specify which files should be added to the gem when it is released.

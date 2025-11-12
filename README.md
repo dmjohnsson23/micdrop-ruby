@@ -184,6 +184,7 @@ migrate source, sink do
         put 'B'
     end
     # Or you can use the `update` and `value` methods directly in the main item block
+    # (`value=` is also supported if you prefer)
     take :c do
         if value % 2
             update 'Odd'

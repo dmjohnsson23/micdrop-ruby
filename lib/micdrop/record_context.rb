@@ -34,6 +34,8 @@ module Micdrop
       process_item_helper(value, put, convert, apply, block)
     end
 
+    # TODO: collect_hash (not sure what the signature of it should be?)
+
     def flush(reset: true)
       return unless @dirty
 

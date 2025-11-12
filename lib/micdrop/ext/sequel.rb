@@ -38,7 +38,7 @@ module Micdrop::Ext
 
     # A sink which will update an item if it exists, or insert it otherwise
     class InsertUpdateSink
-      def initialize(dataset, key_columns)
+      def initialize(dataset, key_columns, update_actions: {}, default_update_action: :coalesce, match_empty_key: false)
         @dataset = dataset
         @key_columns = if key_columns.is_a? Symbol
                          [key_columns]
@@ -46,6 +46,9 @@ module Micdrop::Ext
                          key_columns
                          # TODO: else throw error
                        end
+        @update_actions = update_actions
+        @default_update_action = default_update_action
+        @match_empty_key = match_empty_key
       end
 
       def <<(collector)
@@ -57,9 +60,31 @@ module Micdrop::Ext
         if existing.nil?
           dataset.insert(**collector)
         else
-          # TODO: selectively update specific columns based on existing values
-          # e.g. only update if current value is null
-          dataset.update(**collector)
+          dataset.update(**update_merge(existing, collector))
+        end
+      end
+
+      private
+
+      def update_merge(existing, collector)
+        if @update_actions.empty?
+          # If we don't have per-column actions, we can take shortcuts for some actions types
+          return collector if @default_update_action == :always_overwrite
+          return collector.compact if @default_update_action == :coalesce
+        end
+        # Otherwise merge according to the rules specified
+        existing.merge(collector) do |key, oldval, newval|
+          case @update_actions.fetch(key, @default_update_action)
+          when :coalesce then newval.nil? ? oldval : newval
+          when :overwrite_nulls then olval.nil? ? newval : oldval
+          when :always_overwrite then newval
+          when :keep_existing then oldval
+          when :append then format("%s %s", oldval, newval)
+          when :append_line then format("%s\n%s", oldval, newval)
+          when :prepend then format("%s %s", newval, oldval)
+          when :prepend_line then format("%s\n%s", newval, oldval)
+          when :add then oldval + newval
+          end
         end
       end
     end

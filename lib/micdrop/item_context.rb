@@ -26,7 +26,7 @@ module Micdrop
 
     # Run a predefined pipline on this Item.
     def apply(pipeline)
-      instance_eval(&pipeline)
+      instance_eval(&pipeline) unless pipeline.nil?
     end
 
     # Treat the current Item as a Record, allowing child objects to be Taken.
@@ -38,7 +38,7 @@ module Micdrop
     # scope that will not affect the value in the current scope.
     def scope(&block)
       ctx = ItemContext.new(@record, @value)
-      ctx.apply block
+      ctx.apply block unless block.nil?
       ctx
     end
 
@@ -53,9 +53,12 @@ module Micdrop
 
     ### record passthru ###
 
-    def put(name)
-      # TODO: allow second parameter with different value
-      @record.put name, @value
+    def put(*args)
+      if args.length == 1
+        @record.put args.first, @value
+      else
+        @record.put(*args)
+      end
     end
 
     def skip
@@ -128,8 +131,9 @@ module Micdrop
     end
 
     # Parse a value into a boolean using a list of common values for true or false
-    def parse_boolean(true_values = [1, "1", "true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"],
-                      false_values = [0, "0", "false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF", ""])
+    def parse_boolean(true_values = [1, "1", "true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON", "Y", "y"],
+                      false_values = [0, "0", "false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF", "N",
+                                      "n", ""])
       if true_values.include? @value
         @value = true
       elsif false_values.include? @value
@@ -222,6 +226,13 @@ module Micdrop
         string += k.to_s + kv_delimiter + v
       end
       @value = @value.join(delimiter)
+    end
+
+    # Filter for the first non-nil value in a list
+    def coalesce
+      return if @value.nil?
+
+      @value = @value.compact.first
     end
 
     # TODO: JSON and Regex match

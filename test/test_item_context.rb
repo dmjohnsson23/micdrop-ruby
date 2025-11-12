@@ -21,6 +21,24 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe :apply do
+    before do
+      @ctx = Micdrop::ItemContext.new(nil, "10")
+    end
+
+    it "can be run with a symbol referencing an ItemContext method" do
+      @ctx.apply :parse_int
+
+      _(@ctx.value).must_equal 10
+    end
+    it "can be run with a symbol referencing an externally defined method"
+    it "can be run with a proc" do
+      @ctx.apply(proc { parse_int })
+
+      _(@ctx.value).must_equal 10
+    end
+  end
+
   describe :parse_date do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)

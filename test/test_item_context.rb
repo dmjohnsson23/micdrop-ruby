@@ -3,6 +3,23 @@
 require_relative "test_helper"
 
 describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
+  describe :value do
+    before do
+      @ctx = Micdrop::ItemContext.new(nil, 10)
+    end
+
+    it "is readable" do
+      _(@ctx.value).must_equal 10
+    end
+    it "is settable" do
+      @ctx.value = 20
+      _(@ctx.value).must_equal 20
+    end
+    it "can be updated via update" do
+      @ctx.update 20
+      _(@ctx.value).must_equal 20
+    end
+  end
   describe :convert do
     before do
       @ctx = Micdrop::ItemContext.new(nil, 10)

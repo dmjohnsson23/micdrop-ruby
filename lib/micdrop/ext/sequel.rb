@@ -90,3 +90,6 @@ module Micdrop::Ext
     end
   end
 end
+
+# TODO: maybe we can make ItemContext methods for common tasks (e.g. lookup in the db)
+# These are pretty easy to do already, but we'll see.

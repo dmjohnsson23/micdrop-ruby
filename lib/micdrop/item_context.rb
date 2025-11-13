@@ -17,19 +17,23 @@ module Micdrop
     # Directly update the current value
     def update(value)
       @value = value
+      self
     end
 
     ##
     # Use plain Ruby code to modify this Item.
     def convert(proc_or_symbol = nil, &block)
+      proc_or_symbol = method(proc_or_symbol) if proc_or_symbol.is_a? Symbol
       @value = proc_or_symbol.call(@value) unless proc_or_symbol.nil?
       @value = block.call(@value) unless block.nil?
+      self
     end
 
     ##
     # Run a predefined pipline on this Item.
     def apply(pipeline)
       instance_eval(&pipeline) unless pipeline.nil?
+      self
     end
 
     ##
@@ -52,9 +56,10 @@ module Micdrop
     #
     # Can be used to take slices of arrays as well
     def extract(name)
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = @value[name]
+      self
     end
 
     ### record passthru ###
@@ -70,6 +75,7 @@ module Micdrop
       else
         @record.put(*args)
       end
+      self
     end
 
     ##
@@ -90,8 +96,11 @@ module Micdrop
 
     ##
     # Debug tool to print the current value to the console
-    def inspect
+    def inspect(prefix = nil)
+      puts prefix unless prefix.nil?
       puts @value
+      puts "\n"
+      self
     end
 
     ### Basic transformers ###
@@ -99,17 +108,19 @@ module Micdrop
     ##
     # Parse a value to an integer
     def parse_int(base = 10)
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = @value.to_i(base)
+      self
     end
 
     ##
     # Parse a value to a float
     def parse_float
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = @value.to_f
+      self
     end
 
     ##
@@ -120,6 +131,7 @@ module Micdrop
         @value = nil if @value == zero
       end
       @value = ::Date.strptime(@value, format) unless @value.nil?
+      self
     end
 
     ##
@@ -130,6 +142,7 @@ module Micdrop
         @value = nil if @value == zero
       end
       @value = ::DateTime.strptime(@value, format) unless @value.nil?
+      self
     end
 
     ##
@@ -140,6 +153,7 @@ module Micdrop
       elsif !@value.nil?
         @value = @value.strftime(format)
       end
+      self
     end
 
     ##
@@ -150,6 +164,7 @@ module Micdrop
       elsif !@value.nil?
         @value = @value.strftime(format)
       end
+      self
     end
 
     ##
@@ -166,6 +181,7 @@ module Micdrop
       else
         raise ValueError("Unrecognized value: {repr(value)}")
       end
+      self
     end
 
     ##
@@ -178,41 +194,60 @@ module Micdrop
       else
         @value = false_value
       end
+      self
     end
 
     ##
     # Format the value into a string using sprintf-style formatting, or using `to_s` if no
     # template is provided.
     def format_string(template = nil)
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = if template.nil?
                  @value.to_s
                else
                  template % @value
                end
+      self
     end
 
     ##
     # Lookup the value in a hash
     def lookup(mapping, pass_if_not_found: false)
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = mapping.fetch @value do |v|
         v if pass_if_not_found
       end
+      self
     end
 
     ##
     # Perform a string replacement or regex replacement on the current value
     def string_replace(find, replace)
       @value = @value.gsub find, replace unless value.nil?
+      self
+    end
+
+    ##
+    # Strip whitespace from a string
+    def strip
+      @value = @value.strip unless value.nil?
+      self
+    end
+
+    ##
+    # Treats empty strings as nil
+    def empty_to_nil
+      @value = nil if @value == ""
+      self
     end
 
     ##
     # Provide a default value if the current value is nill
     def default(default_value)
       @value = default_value if @value.nil?
+      self
     end
 
     ### String (de)structuring ###
@@ -222,16 +257,18 @@ module Micdrop
     #
     # Accepts an optional block in the record context of the newly created list of values.
     def split(delimiter, &block)
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = @value.split(delimiter)
       enter(&block) unless block.nil?
+      self
     end
 
     ##
     # Join a list into a string
     def join(delimiter)
       @value = @value.join(delimiter) unless @value.nil?
+      self
     end
 
     ##
@@ -239,7 +276,7 @@ module Micdrop
     #
     # Accepts an optional block in the record context of the newly created hash of values.
     def split_kv(kv_delimiter, item_delimiter = "\n", &block)
-      return if @value.nil?
+      return self if @value.nil?
 
       kv = {}
       @value.each_line(item_delimiter, chomp: true) do |item|
@@ -248,27 +285,39 @@ module Micdrop
       end
       @value = kv
       enter(&block) unless block.nil?
+      self
     end
 
     ##
     # Join a hash into a string
     def join_kv(kv_delimiter, item_delimiter = "\n")
-      return if @value.nil?
+      return self if @value.nil?
 
       string = ""
       @value.each_pair do |k, v|
         string += item_delimiter if string != ""
         string += k.to_s + kv_delimiter + v
       end
-      @value = @value.join(delimiter)
+      @value = string
+      self
     end
 
     ##
     # Filter for the first non-nil value in a list
     def coalesce
-      return if @value.nil?
+      return self if @value.nil?
 
       @value = @value.compact.first
+      self
+    end
+
+    ##
+    # Filter out all nil values from a list
+    def compact
+      return self if @value.nil?
+
+      @value = @value.compact
+      self
     end
 
     # TODO: JSON and Regex match

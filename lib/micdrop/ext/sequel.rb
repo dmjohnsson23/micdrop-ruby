@@ -4,6 +4,7 @@ require "sequel"
 
 module Micdrop::Ext
   module Sequel
+    ##
     # A sink which will exclusively insert new items into the database
     class InsertSink
       def initialize(dataset)
@@ -15,6 +16,7 @@ module Micdrop::Ext
       end
     end
 
+    ##
     # A sink which will always issue an update statement
     class UpdateSink
       def initialize(dataset, key_columns)
@@ -36,6 +38,7 @@ module Micdrop::Ext
       end
     end
 
+    ##
     # A sink which will update an item if it exists, or insert it otherwise
     class InsertUpdateSink
       def initialize(dataset, key_columns, update_actions: {}, default_update_action: :coalesce, match_empty_key: false)
@@ -56,11 +59,13 @@ module Micdrop::Ext
         @key_columns.each do |col|
           dataset = dataset.where(**{ col => collector[col] })
         end
-        existing = dataset.first
-        if existing.nil?
+        existing = dataset.limit(2).all
+        if existing.count > 1
+          raise Micdrop::SinkError, "Key column(s) of this InsertUpdateSink are not unique"
+        elsif existing.empty?
           dataset.insert(**collector)
         else
-          dataset.update(**update_merge(existing, collector))
+          dataset.update(**update_merge(existing.first, collector))
         end
       end
 
@@ -76,7 +81,7 @@ module Micdrop::Ext
         existing.merge(collector) do |key, oldval, newval|
           case @update_actions.fetch(key, @default_update_action)
           when :coalesce then newval.nil? ? oldval : newval
-          when :overwrite_nulls then olval.nil? ? newval : oldval
+          when :overwrite_nulls then oldval.nil? ? newval : oldval
           when :always_overwrite then newval
           when :keep_existing then oldval
           when :append then format("%s %s", oldval, newval)

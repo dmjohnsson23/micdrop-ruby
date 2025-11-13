@@ -86,6 +86,15 @@ module Micdrop
     end
 
     ##
+    # Debug tool to print the current sink collector to the console
+    def inspect_collector(prefix = nil)
+      puts prefix unless prefix.nil?
+      puts @collector.inspect
+      puts "\n"
+      self
+    end
+
+    ##
     # Clear the collection of currently-put values.
     def reset
       @dirty = false

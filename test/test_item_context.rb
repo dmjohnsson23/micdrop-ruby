@@ -2,6 +2,10 @@
 
 require_relative "test_helper"
 
+def some_random_method(value)
+  value * 2
+end
+
 describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :value do
     before do
@@ -16,7 +20,7 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       _(@ctx.value).must_equal 20
     end
     it "can be updated via update" do
-      @ctx.update 20
+      _(@ctx.update(20)).must_be_same_as @ctx
       _(@ctx.value).must_equal 20
     end
   end
@@ -25,14 +29,18 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       @ctx = Micdrop::ItemContext.new(nil, 10)
     end
 
-    it "can be run with a symbol"
+    it "can be run with a symbol" do
+      _(@ctx.convert(:some_random_method)).must_be_same_as @ctx
+
+      _(@ctx.value).must_equal 20
+    end
     it "can be run with a proc" do
-      @ctx.convert(proc { it * 2 })
+      _(@ctx.convert(proc { it * 2 })).must_be_same_as @ctx
 
       _(@ctx.value).must_equal 20
     end
     it "can be run with a block" do
-      @ctx.convert { it * 2 }
+      _(@ctx.convert { it * 2 }).must_be_same_as @ctx
 
       _(@ctx.value).must_equal 20
     end
@@ -44,40 +52,82 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
 
     it "can be run with a symbol referencing an ItemContext method" do
-      @ctx.apply :parse_int
+      _(@ctx.apply(:parse_int)).must_be_same_as @ctx
 
       _(@ctx.value).must_equal 10
     end
     it "can be run with a symbol referencing an externally defined method"
     it "can be run with a proc" do
-      @ctx.apply(proc { parse_int })
+      _(@ctx.apply(proc { parse_int })).must_be_same_as @ctx
 
       _(@ctx.value).must_equal 10
+    end
+  end
+
+  describe :scope do
+    before do
+      @ctx = Micdrop::ItemContext.new(nil, 10)
+    end
+
+    it "contains updates to an independent scope" do
+      scoped = @ctx.scope
+      _(@ctx.update(9)).must_be_same_as @ctx
+      _(scoped.update(11)).must_be_same_as scoped
+
+      _(@ctx.value).must_equal 9
+      _(scoped.value).must_equal 11
+    end
+
+    it "returns a new ItemContext" do
+      scoped = @ctx.scope
+
+      _(scoped).must_be_instance_of Micdrop::ItemContext
+      _(scoped).wont_be_same_as @ctx
+    end
+  end
+
+  describe :extract do
+    before do
+      @ctx = Micdrop::ItemContext.new(nil, { a: 10, b: 15 })
+    end
+
+    it "extracts child values" do
+      @ctx.extract :a
+
+      _(@ctx.value).must_equal 10
+    end
+
+    it "plays well with scope" do
+      a = @ctx.scope.extract :a
+      b = @ctx.scope.extract :b
+
+      _(a.value).must_equal 10
+      _(b.value).must_equal 15
     end
   end
 
   describe :parse_date do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.parse_date
+      _(ctx.parse_date).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "handles zero dates" do
       ctx = Micdrop::ItemContext.new(nil, "0000-00-00")
-      ctx.parse_date zero_date: true
+      _(ctx.parse_date(zero_date: true)).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "parses a date in ISO format" do
       ctx = Micdrop::ItemContext.new(nil, "2021-09-01")
-      ctx.parse_date
+      _(ctx.parse_date).must_be_same_as ctx
 
       _(ctx.value).must_equal Date.new(2021, 9, 1)
     end
     it "parses a date in a custom format" do
       ctx = Micdrop::ItemContext.new(nil, "09/01/21")
-      ctx.parse_date "%m/%d/%y"
+      _(ctx.parse_date("%m/%d/%y")).must_be_same_as ctx
 
       _(ctx.value).must_equal Date.new(2021, 9, 1)
     end
@@ -86,25 +136,25 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :parse_datetime do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.parse_datetime
+      _(ctx.parse_datetime).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "handles zero datetimes" do
       ctx = Micdrop::ItemContext.new(nil, "0000-00-00 00:00:00")
-      ctx.parse_datetime zero_date: true
+      _(ctx.parse_datetime(zero_date: true)).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "parses a datetime in ISO format" do
       ctx = Micdrop::ItemContext.new(nil, "2021-09-01 14:53:00")
-      ctx.parse_datetime
+      _(ctx.parse_datetime).must_be_same_as ctx
 
       _(ctx.value).must_equal DateTime.new(2021, 9, 1, 14, 53, 0)
     end
     it "parses a datetime in a custom format" do
       ctx = Micdrop::ItemContext.new(nil, "09/01/21 2:53 PM")
-      ctx.parse_datetime "%m/%d/%y %k:%M %p"
+      _(ctx.parse_datetime("%m/%d/%y %k:%M %p")).must_be_same_as ctx
 
       _(ctx.value).must_equal DateTime.new(2021, 9, 1, 14, 53, 0)
     end
@@ -113,19 +163,19 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :format_date do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.format_date
+      _(ctx.format_date).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "can generate zero dates" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.format_date zero_date: true
+      _(ctx.format_date(zero_date: true)).must_be_same_as ctx
 
       _(ctx.value).must_equal "0000-00-00"
     end
     it "formats a date" do
       ctx = Micdrop::ItemContext.new(nil, Date.new(2024, 11, 14))
-      ctx.format_date
+      _(ctx.format_date).must_be_same_as ctx
 
       _(ctx.value).must_equal "2024-11-14"
     end
@@ -134,19 +184,19 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :format_datetime do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.format_datetime
+      _(ctx.format_datetime).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "can generate zero datetimes" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.format_datetime zero_date: true
+      _(ctx.format_datetime(zero_date: true)).must_be_same_as ctx
 
       _(ctx.value).must_equal "0000-00-00 00:00:00"
     end
     it "formats a datetime" do
       ctx = Micdrop::ItemContext.new(nil, DateTime.new(2024, 11, 14, 4, 55))
-      ctx.format_datetime
+      _(ctx.format_datetime).must_be_same_as ctx
 
       _(ctx.value).must_equal "2024-11-14 04:55:00"
     end
@@ -155,7 +205,7 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :parse_boolean do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.parse_boolean
+      _(ctx.parse_boolean).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
@@ -166,11 +216,11 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       ctx_false2 = Micdrop::ItemContext.new(nil, "No")
       ctx_false3 = Micdrop::ItemContext.new(nil, "")
 
-      ctx_true1.parse_boolean
-      ctx_true2.parse_boolean
-      ctx_false1.parse_boolean
-      ctx_false2.parse_boolean
-      ctx_false3.parse_boolean
+      _(ctx_true1.parse_boolean).must_be_same_as ctx_true1
+      _(ctx_true2.parse_boolean).must_be_same_as ctx_true2
+      _(ctx_false1.parse_boolean).must_be_same_as ctx_false1
+      _(ctx_false2.parse_boolean).must_be_same_as ctx_false2
+      _(ctx_false3.parse_boolean).must_be_same_as ctx_false3
 
       _(ctx_true1.value).must_equal true
       _(ctx_true2.value).must_equal true
@@ -182,8 +232,8 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       ctx_true = Micdrop::ItemContext.new(nil, "Darn Right!")
       ctx_false = Micdrop::ItemContext.new(nil, "Ain't No Way!")
 
-      ctx_true.parse_boolean ["Darn Right!"], ["Ain't No Way!"]
-      ctx_false.parse_boolean ["Darn Right!"], ["Ain't No Way!"]
+      _(ctx_true.parse_boolean(["Darn Right!"], ["Ain't No Way!"])).must_be_same_as ctx_true
+      _(ctx_false.parse_boolean(["Darn Right!"], ["Ain't No Way!"])).must_be_same_as ctx_false
 
       _(ctx_true.value).must_equal true
       _(ctx_false.value).must_equal false
@@ -194,7 +244,7 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :format_boolean do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.format_boolean
+      _(ctx.format_boolean).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
@@ -202,8 +252,8 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       ctx_true = Micdrop::ItemContext.new(nil, true)
       ctx_false = Micdrop::ItemContext.new(nil, false)
 
-      ctx_true.format_boolean
-      ctx_false.format_boolean
+      _(ctx_true.format_boolean).must_be_same_as ctx_true
+      _(ctx_false.format_boolean).must_be_same_as ctx_false
 
       _(ctx_true.value).must_equal "Yes"
       _(ctx_false.value).must_equal "No"
@@ -212,8 +262,8 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       ctx_true = Micdrop::ItemContext.new(nil, true)
       ctx_false = Micdrop::ItemContext.new(nil, false)
 
-      ctx_true.format_boolean "Darn Right!", "Ain't No Way!"
-      ctx_false.format_boolean "Darn Right!", "Ain't No Way!"
+      _(ctx_true.format_boolean("Darn Right!", "Ain't No Way!")).must_be_same_as ctx_true
+      _(ctx_false.format_boolean("Darn Right!", "Ain't No Way!")).must_be_same_as ctx_false
 
       _(ctx_true.value).must_equal "Darn Right!"
       _(ctx_false.value).must_equal "Ain't No Way!"
@@ -223,14 +273,14 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :format_string do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.format_string "%s"
+      _(ctx.format_string("%s")).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
 
     it "formats a string" do
       ctx = Micdrop::ItemContext.new(nil, 1)
-      ctx.format_string "%s"
+      _(ctx.format_string("%s")).must_be_same_as ctx
 
       _(ctx.value).must_equal "1"
     end
@@ -239,21 +289,21 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :lookup do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.lookup({ "A" => 1, "B" => 2 })
+      _(ctx.lookup({ "A" => 1, "B" => 2 })).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
 
     it "converts a known value" do
       ctx = Micdrop::ItemContext.new(nil, "A")
-      ctx.lookup({ "A" => 1, "B" => 2 })
+      _(ctx.lookup({ "A" => 1, "B" => 2 })).must_be_same_as ctx
 
       _(ctx.value).must_equal 1
     end
 
     it "optionally passes the original value on an unknown value" do
       ctx = Micdrop::ItemContext.new(nil, "C")
-      ctx.lookup({ "A" => 1, "B" => 2 }, pass_if_not_found: true)
+      _(ctx.lookup({ "A" => 1, "B" => 2 }, pass_if_not_found: true)).must_be_same_as ctx
 
       _(ctx.value).must_equal "C"
     end
@@ -264,13 +314,13 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :string_replace do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.string_replace "a", "b"
+      _(ctx.string_replace("a", "b")).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "replaces all matching values in a string" do
       ctx = Micdrop::ItemContext.new(nil, "bananas")
-      ctx.string_replace "a", "i"
+      _(ctx.string_replace("a", "i")).must_be_same_as ctx
 
       _(ctx.value).must_equal "bininis"
     end
@@ -281,19 +331,19 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :extract do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.extract 2
+      _(ctx.extract(2)).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
     it "extracts a single item from an array" do
       ctx = Micdrop::ItemContext.new(nil, [1, 2, 3, 4, 5, 6, 7, 8, 9])
-      ctx.extract 2
+      _(ctx.extract(2)).must_be_same_as ctx
 
       _(ctx.value).must_equal 3
     end
     it "slices an array with a range" do
       ctx = Micdrop::ItemContext.new(nil, [1, 2, 3, 4, 5, 6, 7, 8, 9])
-      ctx.extract 2..4
+      _(ctx.extract(2..4)).must_be_same_as ctx
 
       _(ctx.value).must_equal [3, 4, 5]
     end
@@ -302,12 +352,12 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :default do
     it "overwrites nil" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.default 10
+      _(ctx.default(10)).must_be_same_as ctx
       _(ctx.value).must_equal 10
     end
     it "doesn't overwrite actual values" do
       ctx = Micdrop::ItemContext.new(nil, 5)
-      ctx.default 10
+      _(ctx.default(10)).must_be_same_as ctx
       _(ctx.value).must_equal 5
     end
   end
@@ -315,7 +365,7 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :split do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.split ","
+      _(ctx.split(",")).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
@@ -325,7 +375,7 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :join do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.join ","
+      _(ctx.join(",")).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
@@ -335,7 +385,7 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :split_kv do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.split_kv ": "
+      _(ctx.split_kv(": ")).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
@@ -346,10 +396,15 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
   describe :join_kv do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      ctx.join_kv ": "
+      _(ctx.join_kv(": ")).must_be_same_as ctx
 
       _(ctx.value).must_be_nil
     end
-    it "joins a hash"
+    it "joins a hash" do
+      ctx = Micdrop::ItemContext.new(nil, { "A" => "1", "B" => "2" })
+      _(ctx.join_kv(": ")).must_be_same_as ctx
+
+      _(ctx.value).must_equal "A: 1\nB: 2"
+    end
   end
 end

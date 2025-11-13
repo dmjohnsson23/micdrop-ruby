@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "micdrop/errors"
 require_relative "micdrop/array_sink"
 require_relative "micdrop/item_context"
 require_relative "micdrop/record_context"

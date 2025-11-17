@@ -1,6 +1,6 @@
 # Micdrop
 
-Extensible framework/library to migrate data from source to another using a more declarative interface. It is primarilly intended for use in:
+Extensible framework/library to migrate data from source to another using a more declarative interface. It is primarily intended for use in:
 
 * Import scripts
 * Export scripts
@@ -9,14 +9,17 @@ Extensible framework/library to migrate data from source to another using a more
 At its core, the library's operation is quite simple: loop over the rows of the source data, perform some transformations, and output the transformed data to the sink.
 
 ```ruby
-migrate CSV.read('data_source.csv', headers:true), TableInsertSink.new('destination') do
-    take 'Name', put: :name
-    take 'Birth Date' do
-        parse_date '%m/%d/%y'
-        format_date '%Y-%d-%m'
+source = CSV.read("data_source.csv", headers:true)
+sink = Micdrop::Ext::Sequel::InsertSink.new DB[:destination_table]
+
+migrate source, sink do
+    take "Name", put: :name
+    take "Birth Date" do
+        parse_date "%m/%d/%y"
+        format_date "%Y-%d-%m"
         put :dob
     end
-    take 'Deceased?' do
+    take "Deceased?" do
         parse_boolean
         default false
         put :is_deceased
@@ -38,30 +41,16 @@ end
 * Put: Deposit a single item into a Collector
 * Collector: Similar to a Record, but intended to be filled by the migration rather than coming from the source. (A single Collector exists by default, which will be pushed to the Sink. However, you can also use manually-created Collectors as Items to build up hierarchical structures.)
 
-## Installation
-
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
+For any curious, the library name itself is partially an abbreviation of the words, "Migrate, Import, and Convert".
 
 ## Usage
 
 Before we can begin a migration, we need a source and a sink.
 
-Essensially, any Ruby object which meets the following criteria can be used as a source:
+Essentially, any Ruby object which meets the following criteria can be used as a source:
 
 * The object responds to `:each`, `:each_with_index`, and/or `:each_pair` (so, any `Enumerator` works)
-* The items yieled by `:each` and friends respond to `:[]`
+* The items yielded by `:each` and friends respond to `:[]`
 
 A sink is similar, but has a single criteria: it must respond to `:<<`.
 
@@ -86,15 +75,15 @@ sink = []
 
 migrate source, sink do # This block is executed for every record in the source
     # If no conversion is needed, you can simply Take items and Put them in the appropriate place
-    take :a, put: 'A'
-    take :b, put: 'B'
+    take :a, put: "A"
+    take :b, put: "B"
 end
 
 # `sink` now looks like this:
 [
-    {'A'=>1, 'B'=>2},
-    {'A'=>3, 'B'=>4},
-    {'A'=>5, 'B'=>6},
+    {"A"=>1, "B"=>2},
+    {"A"=>3, "B"=>4},
+    {"A"=>5, "B"=>6},
 ]
 ```
 
@@ -102,37 +91,78 @@ Or course, data rarely maps so cleanly in the real world; conversion is usually 
 
 ```ruby
 source = [
-    {a:'Yes', b:'08/07/22', c:'Stuff'},
-    {a:'Yes', b:'24/04/24', c:'Things'},
-    {a:'No', b:'11/12/21', c:nil},
+    {a:"Yes", b:"08/07/22", c:"Stuff"},
+    {a:"Yes", b:"24/04/24", c:"Things"},
+    {a:"No", b:"11/12/21", c:nil},
 ]
 sink = []
 
 migrate source, sink do
-    take :a, put: 'A' do
+    take :a, put: "A" do
         parse_boolean
     end
-    take :b, put: 'B' do
-        # We'll parse the date from a string, and then format it in the new format
-        parse_date '%m/%d/%y'
-        format_date '%Y-%d-%m'
+    take :b, put: "B" do
+        # We"ll parse the date from a string, and then format it in the new format
+        parse_date "%m/%d/%y"
+        format_date "%Y-%d-%m"
     end
     take :c  do
-        default 'Whatsit'
+        default "Whatsit"
         # The Put can optionally be specified in the block body rather than as a method parameter
-        put 'C'
+        put "C"
     end
+    # Method chaining is also allowed. The previous block could alternatively have bee written as:
+    take(:c).default("Whatsit").put("C")
 end
 
 # `sink` now looks like this:
 [
-    {'A'=>true, 'B'=>'2022-07-08', 'C'=>'Stuff'},
-    {'A'=>true, 'B'=>'2024-04-24', 'C'=>'Things'},
-    {'A'=>false, 'B'=>'2021-12-11', 'C'=>'Whatsit'},
+    {"A"=>true, "B"=>"2022-07-08", "C"=>"Stuff"},
+    {"A"=>true, "B"=>"2024-04-24", "C"=>"Things"},
+    {"A"=>false, "B"=>"2021-12-11", "C"=>"Whatsit"},
 ]
 ```
 
-Each block acts as a pipeline, with each transform being executed sequentially and modifying the value in-place. Your pipelines can be arbitrarilly complex, and even include multiple Puts at different stages of the pipeline.
+Each block acts as a pipeline, with each transform being executed sequentially and modifying the value in-place. Your pipelines can be arbitrarily complex, and even include multiple Puts at different stages of the pipeline.
+
+If your source data is more structured, you can use `scope` and `extract` to navigate the tree:
+
+```ruby
+source = [
+    {some:{deeply:{nested:{data: "1", stuff: "2"}}, other: "3"}},
+    {some:{deeply:{nested:{data: "4", stuff: "5"}}, other: "6"}},
+    {some:{deeply:{nested:{data: "7", stuff: "8"}}, other: "9"}},
+]
+sink = []
+
+migrate source, sink do
+    take :some do
+        scope do
+            # The `scope` method prevents operations in this block from affecting the value in 
+            # the outer `take` block. The `extract` method traverses down the tree.
+            extract :other
+            put :some_other
+        end
+        scope do
+            # `extract` can be used multiple times to go down multiple levels
+            extract :deeply
+            extract :nested
+            # And scopes can be nested
+            scope do
+                extract :data
+                put :some_deeply_nested_data
+            end
+            scope do
+                extract :stuff
+                put :some_deeply_nested_stuff
+            end
+        end
+    end
+    # If you only need a single item in a deeply nested structure, you can chain all the  methods 
+    # directly on the `take` as well
+    take(:some).extract(:deeply).extract(:nested).extract(:stuff).put(:some_deeply_nested_stuff)
+end
+```
 
 If you find yourself writing the same block multiple times, you can instead write it as a proc and apply that to the Takes.
 
@@ -150,10 +180,10 @@ migrate source, sink do
         default 0
     end
     # Both of the following are equivilent
-    take :a, apply: default_0, put: 'A'
+    take :a, apply: default_0, put: "A"
     take :b do
         apply default_0
-        put 'B'
+        put "B"
     end
 end
 
@@ -177,29 +207,29 @@ sink = []
 
 migrate source, sink do
     # You can pass a proc (or symbol) to the `convert` parameter
-    take :a, convert: proc {it + 1}, put: 'A'
+    take :a, convert: proc {it + 1}, put: "A"
     # Or you can use a `convert` block
     take :b do
         convert {it * 2}
-        put 'B'
+        put "B"
     end
     # Or you can use the `update` and `value` methods directly in the main item block
     # (`value=` is also supported if you prefer)
     take :c do
         if value % 2
-            update 'Odd'
+            update "Odd"
         else
-            update 'Even'
+            update "Even"
         end
-        put 'C'
+        put "C"
     end
 end
 
 # `sink` now looks like this:
 [
-    {'A'=>2, 'B'=>4, 'C'=>'Odd'},
-    {'A'=>5, 'B'=>10, 'C'=>'Even'},
-    {'A'=>8, 'B'=>16, 'C'=>'Odd'},
+    {"A"=>2, "B"=>4, "C"=>"Odd"},
+    {"A"=>5, "B"=>10, "C"=>"Even"},
+    {"A"=>8, "B"=>16, "C"=>"Odd"},
 ]
 ```
 
@@ -218,16 +248,7 @@ end
 migrate source, sink do
     take :a do
         subtract 1
-        put 'A'
+        put "A"
     end
 ```
 
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/micdrop.

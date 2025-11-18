@@ -2,6 +2,7 @@
 
 require_relative "micdrop/errors"
 require_relative "micdrop/array_sink"
+require_relative "micdrop/files_source"
 require_relative "micdrop/item_context"
 require_relative "micdrop/record_context"
 require_relative "micdrop/stop_skip"
@@ -40,7 +41,7 @@ module Micdrop
   end
 
   def self.migrate_item_helper(from, to, loop_item, loop_index, &block)
-    ctx = RecordContext.new(from, to, loop_item, loop_index)
+    ctx = RootRecordContext.new(from, to, loop_item, loop_index)
     ctx.instance_eval(&block)
     ctx.flush reset: false # No need to reset; item processing is done
   end

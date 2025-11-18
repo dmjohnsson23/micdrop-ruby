@@ -1,29 +1,27 @@
 # frozen_string_literal: true
 
+require "forwardable"
+
 # Represets
 module Micdrop
+  ##
+  # Common functions for all record contexts
   class RecordContext
-    def initialize(source, sink, loop_item, loop_index = nil)
-      @source = source
-      @sink = sink
-      @loop_item = loop_item
-      @loop_index = loop_index
-      reset
-    end
+    attr_reader :record
 
     ##
     # `take` extracts a single item from a record (e.g. a column from a row) and allows it to be
     # operated upon. This is one of the most common operations you will use. It takes the following
     # additional options:
     #
-    # * `put` specifies where the taken vaue will go in the sink, after all transformations are
+    # * `put` specifies where the taken value will go in the sink, after all transformations are
     #   applied.
     # * `convert` takes a proc or function that will be called on the taken value. The new value
     #   will be the return value of the function.
     # * `apply` takes a proc or function that will be used as a pipeline to transform the value.
     #   See `ItemContext` for details. (Passing a block also has the same effect.)
     def take(name, put: nil, convert: nil, apply: nil, &block)
-      value = @loop_item[name]
+      value = @record.nil? ? nil : @record[name]
       process_item_helper(value, put, convert, apply, block)
     end
 
@@ -40,16 +38,7 @@ module Micdrop
     # from the record. You can use this as a unique identifier if the source does not have an
     # explicit identifier.
     def index(put: nil, convert: nil, apply: nil, &block)
-      process_item_helper(@loop_index, put, convert, apply, block)
-    end
-
-    ##
-    # Put a value in the sink.
-    #
-    # You typically won't use this directly.
-    def put(name, value)
-      @collector[name] = value
-      @dirty = true
+      process_item_helper(loop_index, put, convert, apply, block)
     end
 
     ##
@@ -74,6 +63,41 @@ module Micdrop
     # Stop processing values from the source. This is similar to a plain-ruby `break` statement.
     def stop
       raise Stop
+    end
+
+    private
+
+    def process_item_helper(value, put, convert, apply, block)
+      ctx = ItemContext.new(self, value)
+      ctx.convert(convert) unless convert.nil?
+      ctx.apply(apply) unless apply.nil?
+      ctx.apply(block) unless block.nil?
+      self.put(put, ctx.value) unless put.nil?
+      ctx
+    end
+  end
+
+  ##
+  # Record context for root-level
+  class RootRecordContext < RecordContext
+    def initialize(source, sink, loop_item, loop_index = nil)
+      @source = source
+      @sink = sink
+      @loop_item = loop_item
+      @record = loop_item
+      @loop_index = loop_index
+      reset
+    end
+
+    attr_reader :source, :sink, :loop_item, :loop_index, :collector
+
+    ##
+    # Put a value in the sink.
+    #
+    # You typically won't use this directly.
+    def put(name, value)
+      @collector[name] = value
+      @dirty = true
     end
 
     ##
@@ -104,16 +128,20 @@ module Micdrop
                      {}
                    end
     end
+  end
 
-    private
+  ##
+  # Record context for sub-records
+  class SubRecordContext < RecordContext
+    extend Forwardable
 
-    def process_item_helper(value, put, convert, apply, block)
-      ctx = ItemContext.new(self, value)
-      ctx.convert(convert) unless convert.nil?
-      ctx.apply(apply) unless apply.nil?
-      ctx.apply(block) unless block.nil?
-      self.put(put, ctx.value) unless put.nil?
-      ctx
+    def initialize(item_context, parent_record_context)
+      @item_context = item_context
+      @parent_record_context = parent_record_context
+      @record = item_context.value
     end
+
+    def_delegators :@parent_record_context, :source, :sink, :loop_item, :loop_index, :collector, :put, :flush,
+                   :inspect_collector, :reset
   end
 end

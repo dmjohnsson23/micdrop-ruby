@@ -1,16 +1,17 @@
 # frozen_string_literal: true
 
 require "date"
+require "json"
 
 module Micdrop
   class ItemContext # rubocop:disable Metrics/ClassLength
-    def initialize(record, value)
-      @record = record
+    def initialize(record_context, value)
+      @record_context = record_context
       @value = value
       @original_value = value
     end
 
-    attr_reader :record, :original_value
+    attr_reader :record_context, :original_value
     attr_accessor :value
 
     ##
@@ -39,14 +40,22 @@ module Micdrop
     ##
     # Treat the current Item as a Record, allowing child objects to be Taken.
     def enter(&block)
-      # TODO: create a collection context that allows child items to be taken and put
+      ctx = SubRecordContext.new(self, @record_context)
+      ctx.instance_eval(&block) unless block.nil?
+      ctx
+    end
+
+    ##
+    # Alias for enter.take
+    def take(name, put: nil, convert: nil, apply: nil, &block)
+      enter.take(name, put: put, convert: convert, apply: apply, &block)
     end
 
     ##
     # Create a new item context with the same value as exists currently. Allows operations in a
     # scope that will not affect the value in the current scope.
     def scope(&block)
-      ctx = ItemContext.new(@record, @value)
+      ctx = ItemContext.new(@record_context, @value)
       ctx.apply block unless block.nil?
       ctx
     end
@@ -62,7 +71,7 @@ module Micdrop
       self
     end
 
-    ### record passthru ###
+    ### record context passthru ###
 
     ##
     # Put the current value in the output record.
@@ -71,9 +80,9 @@ module Micdrop
     # (name, value) form is also supported.
     def put(*args)
       if args.length == 1
-        @record.put args.first, @value
+        @record_context.put args.first, @value
       else
-        @record.put(*args)
+        @record_context.put(*args)
       end
       self
     end
@@ -89,8 +98,6 @@ module Micdrop
     def stop
       raise Stop
     end
-
-    # TODO: should we passthru `take`?
 
     ### Debug transformers ###
 
@@ -320,7 +327,29 @@ module Micdrop
       self
     end
 
-    # TODO: JSON and Regex match
+    ##
+    # Parse a string as JSON
+    #
+    # If a block is provided, it will act as a record context where object properties can be taken.
+    def parse_json(&block)
+      return self if @value.nil?
+
+      @value = JSON.parse @value
+      enter(&block) unless block.nil?
+      self
+    end
+
+    ##
+    # Perform a regular expression match, setting the current value to the match data
+    #
+    # If a block is provided, it will act as a record context where captured groups can be taken.
+    def regex(pattern, &block)
+      return self if @value.nil?
+
+      @value = pattern.match @value
+      enter(&block) unless block.nil?
+      self
+    end
 
     private
 

@@ -64,6 +64,39 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe :enter do
+    before do
+      @ctx = Micdrop::ItemContext.new(Micdrop::RootRecordContext.new(nil, nil, nil), { a: 1, b: 2 })
+    end
+
+    it "returns a new SubRecordContext" do
+      entered = @ctx.enter
+
+      _(entered).must_be_instance_of Micdrop::SubRecordContext
+      _(entered).wont_be_same_as @ctx
+      _(entered.record).must_be_same_as @ctx.value
+    end
+
+    it "each call has its own scope" do
+      s1 = @ctx.enter.take :a
+      s2 = @ctx.enter.take :b
+      s3 = @ctx.enter.take(:b).update(3)
+
+      _(s1.value).must_equal 1
+      _(s2.value).must_equal 2
+      _(s3.value).must_equal 3
+    end
+
+    it "still puts to the main scope" do
+      @ctx.enter do
+        take :a, put: :a
+        take :b, put: :b
+      end
+      collected = @ctx.record_context.collector
+      _(collected).must_equal({ a: 1, b: 2 })
+    end
+  end
+
   describe :scope do
     before do
       @ctx = Micdrop::ItemContext.new(nil, 10)
@@ -405,6 +438,41 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       _(ctx.join_kv(": ")).must_be_same_as ctx
 
       _(ctx.value).must_equal "A: 1\nB: 2"
+    end
+  end
+
+  describe :parse_json do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      _(ctx.parse_json).must_be_same_as ctx
+
+      _(ctx.value).must_be_nil
+    end
+
+    it "enters a new sub-context" do
+      ctx = Micdrop::ItemContext.new(Micdrop::RootRecordContext.new(nil, nil, nil), '{"a": 1, "b": 2}')
+      test = self
+      ctx.parse_json do
+        test._(take("a").value).must_equal 1
+        test._(take("b").value).must_equal 2
+      end
+    end
+  end
+  describe :regex do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      _(ctx.regex(/something/)).must_be_same_as ctx
+
+      _(ctx.value).must_be_nil
+    end
+
+    it "enters a new sub-context" do
+      ctx = Micdrop::ItemContext.new(Micdrop::RootRecordContext.new(nil, nil, nil), "a: 1, b: 2")
+      test = self
+      ctx.regex(/a: (?<a>\d+), b: (?<b>\d+)/) do
+        test._(take("a").value).must_equal "1"
+        test._(take("b").value).must_equal "2"
+      end
     end
   end
 end

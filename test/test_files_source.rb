@@ -35,7 +35,7 @@ end
 
 describe Micdrop::FilesSourceRecord do
   before do
-    @record = Micdrop::FilesSourceRecord.new File.join(__dir__, "../examples/data/json/a.json"), {}
+    @record = Micdrop::FilesSourceRecord.new File.join(__dir__, "../examples/data/json/a.json"), false, {}
   end
 
   it "can read a file" do

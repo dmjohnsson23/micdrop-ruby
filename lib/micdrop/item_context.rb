@@ -224,6 +224,7 @@ module Micdrop
       return self if @value.nil?
 
       @value = mapping.fetch @value do |v|
+        warn format "Value %s not found in lookup", v
         v if pass_if_not_found
       end
       self
@@ -240,6 +241,20 @@ module Micdrop
     # Strip whitespace from a string
     def strip
       @value = @value.strip unless value.nil?
+      self
+    end
+
+    ##
+    # Re-encode a string in the given encoding
+    def encode(encoding)
+      @value = @value.encode(encoding) unless value.nil?
+      self
+    end
+
+    ##
+    # Change the encoding of the current string without transcoding
+    def force_encoding(encoding)
+      @value = @value.force_encoding(encoding) unless value.nil?
       self
     end
 
@@ -309,6 +324,8 @@ module Micdrop
       self
     end
 
+    ### List operations ###
+
     ##
     # Filter for the first non-nil value in a list
     def coalesce
@@ -346,7 +363,9 @@ module Micdrop
     def regex(pattern, &block)
       return self if @value.nil?
 
-      @value = pattern.match @value
+      v = pattern.match @value
+      warn format "%s does not match %s", pattern.inspect, @value.inspect if v.nil?
+      @value = v
       enter(&block) unless block.nil?
       self
     end

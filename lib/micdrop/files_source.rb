@@ -12,7 +12,7 @@ module Micdrop
   # * :path (The full path to the file, e.g. /data/migration/files/x.json)
   # * Anything returned by File.stat (:ctime, :mtime, :size, etc...)
   class FilesSource
-    def initialize(dir, files: nil, glob: nil, **file_opts)
+    def initialize(dir, files: nil, glob: nil, binary_mode: false, **file_opts)
       @dir = dir
       @files = if files.nil?
                  if glob.nil?
@@ -23,6 +23,7 @@ module Micdrop
                else
                  files
                end
+      @binary_mode = binary_mode
       @file_opts = file_opts
     end
 
@@ -36,7 +37,7 @@ module Micdrop
           next
         end
 
-        yield filename, FilesSourceRecord.new(path, @file_opts)
+        yield filename, FilesSourceRecord.new(path, @binary_mode, @file_opts)
       end
     end
   end
@@ -44,8 +45,9 @@ module Micdrop
   ##
   # Wrapper object to expose files as a source item
   class FilesSourceRecord
-    def initialize(filename, file_opts)
+    def initialize(filename, binary_mode, file_opts)
       @filename = filename
+      @binary_mode = binary_mode
       @file_opts = file_opts
       @stat = nil
     end
@@ -53,9 +55,9 @@ module Micdrop
     def [](key)
       case key
       when :contents, :content
-        File.read @filename, **@file_opts
+        File.open @filename, @binary_mode ? "rb" : "r", **@file_opts, &:read
       when :stream
-        File.open @filename, @file_opts
+        File.open @filename, @binary_mode ? "rb" : "r", **@file_opts
       when :path
         File.absolute_path @filename
       when :basename

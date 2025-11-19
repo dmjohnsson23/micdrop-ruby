@@ -51,6 +51,13 @@ module Micdrop
       process_item_helper(value, put, convert, apply, block)
     end
 
+    ##
+    # collect multiple values into a format string
+    def collect_format_string(template, *items, put: nil, convert: nil, apply: nil, &block)
+      value = format template, *items.map(&:value)
+      process_item_helper(value, put, convert, apply, block)
+    end
+
     # TODO: collect_hash (not sure what the signature of it should be?)
 
     ##

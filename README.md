@@ -58,6 +58,8 @@ By default, the `:<<` method of the sink will receive a hash. However, if anothe
 the sink may optionally implement `:make_collector` to return another object instead. The collector 
 must respond to `:[]=` but otherwise may be any object you wish.
 
+### Simple Migrations
+
 Let's begin with the simplest possible migration:
 
 ```ruby
@@ -125,6 +127,8 @@ end
 
 Each block acts as a pipeline, with each transform being executed sequentially and modifying the value in-place. Your pipelines can be arbitrarily complex, and even include multiple Puts at different stages of the pipeline.
 
+### Destructuring Data
+
 If your source data is more structured, you can use `scope` and `extract` to navigate the tree:
 
 ```ruby
@@ -164,6 +168,163 @@ migrate source, sink do
 end
 ```
 
+### Outputting Structured Data
+
+By default, Micdrop assumes your output data follows a normal row/column structure, rather than containing complex strucutures. Micdrop has some limited suport for building up structure, though more complex tools are in the works for the future.
+
+The `collect_list` method is currently the primary supported way of building up structure. It takes multiple `take`s and allows them to be operated on in a single pipeline:
+
+```ruby
+source = [
+    {person: 1, home_phone: nil, work_phone: "(354) 756-4796", cell_phone: "(234) 678-7564"},
+    {person: 2, home_phone: "(867) 123-9748", work_phone: nil, cell_phone: "(475) 364-8365"},
+]
+sink = []
+
+migrate source, sink do
+    take :person, put: :person_id
+    collect_list(take(:home_phone), take(:work_phone), take(:cell_phone)) do
+        # Here, the value is a list containing the values of all three `take`s
+        # We can remove the nil values from the list
+        compact
+        # Then join the remaining as a JSON-formatted list
+        format_json
+        put :phones
+    end
+end
+
+# `sink` now looks like this:
+[
+    {person_id: 1, phones: '["(354) 756-4796", "(234) 678-7564"]'},
+    {person_id: 2, phones: '["(867) 123-9748", "(475) 364-8365"]'},
+]
+```
+
+There are several other methods that are useful for operating on collected lists as well, such as `filter`, `map`, `coalesce`, and `map_apply`.
+
+In addition to `collect_list`, there is also `collect_kv` which takes a hash of `take`s as the first argument:
+
+```ruby
+migrate source, sink do
+    take :person, put: :person_id
+    collect_kv({"Home"=>take(:home_phone), "Work"=>take(:work_phone), "Cell"=>take(:cell_phone)}) do
+        # Here, the value is a hash containing the values of all three `take`s
+    end
+end
+```
+
+And also `collect_format_string`, which collects multiple items into a format string:
+
+
+```ruby
+migrate source, sink do
+    take :person, put: :person_id
+    collect_format_string("Home: %s, Work: %s, Cell: %s", take(:home_phone), take(:work_phone), take(:cell_phone)) do
+        # Here, the value is a string with the `take`n values inserted
+    end
+end
+```
+
+### Creating Multiple Output Records
+
+For instances where a single source record maps to multiple sink records, there are techniques for outputting multiple records. The first is simply to use `flush`.
+
+```ruby
+source = [
+    {person: 1, home_phone: "(634) 654-2457", work_phone: "(354) 756-4796", cell_phone: "(234) 678-7564"},
+    {person: 2, home_phone: "(867) 123-9748", work_phone: "(234) 534-2667", cell_phone: "(475) 364-8365"},
+]
+sink = []
+
+migrate source, sink do
+    take :person, put: :person_id
+    take :home_phone, put: :number
+    static "Home", put: :type
+    flush # This creates the first record and resets the collector
+    # Now we start the second record
+    take :person, put: :person_id
+    take :work_phone, put: :number
+    static "Work", put: :type
+    flush 
+    # And the third record
+    take :person, put: :person_id
+    take :cell_phone, put: :number
+    static "Cell", put: :type
+    # There is an implicit flush at the end of the block, so we don't need an explicit one (though it won't hurt anything)
+end
+
+# `sink` now looks like this:
+[
+    {person_id: 1, number: "(634) 654-2457", type: "Home"},
+    {person_id: 1, number: "(354) 756-4796", type: "Work"},
+    {person_id: 1, number: "(234) 678-7564", type: "Cell"},
+    {person_id: 2, number: "(867) 123-9748", type: "Home"},
+    {person_id: 2, number: "(234) 534-2667", type: "Work"},
+    {person_id: 2, number: "(475) 364-8365", type: "Cell"},
+]
+```
+
+`flush` takes an optional `reset` parameter that is true by default. If set to false, the output will still be generated, but the collector will not be reset.
+
+In cases where iteration is desired, `each_subrecord` provides a convenient interface:
+
+```ruby
+source = [
+    {person: 1, addresses: [{line1: "123 Example St.", city: "Anytown", state: "AL", zip: "12345", role: "Mailing"}]},
+    {person: 2, addresses: [{line1: "123 Any Way", city: "Thereabouts", state: "AK", zip: "98765", role: "Home"}, {line1: "PO Box 123", city: "Thereabouts", state: "AK", zip: "98765", role: "Mailing"}]},
+]
+sink = []
+
+migrate source, sink do
+    # Save this so we can `put` it separately in each record
+    person_id = take :person
+    # Iterate each address, and automatically flush and reset after each
+    take(:addresses).each_subrecord flush: true, reset: true do
+        person_id.put :person_id
+        take :line1, put: :line1
+        take :city, put: :city
+        take :state, put: :state
+        take :zip, put: :zip
+        take :role, put: :role
+    end
+end
+
+# `sink` now looks like this:
+[
+    {person_id: 1, line1: "123 Example St.", city: "Anytown", state: "AL", zip: "12345", role: "Mailing"},
+    {person_id: 2, line1: "123 Any Way", city: "Thereabouts", state: "AK", zip: "98765", role: "Home"},
+    {person_id: 2, line1: "PO Box 123", city: "Thereabouts", state: "AK", zip: "98765", role: "Mailing"},
+]
+```
+
+There may also be cases where multiple sinks are needed, rather than merely multiple records in the same sink. For this use case, it is recommended to simply iterate the same source multiple times, once to each sink.
+
+```ruby
+source = [
+    {id: 1, first_name: "Alice", last_name: "Anderson", mail_line1: "123 Example St.", mail_city: "Anytown", mail_state: "AL", mail_zip: "12345"},
+    {id: 2, first_name: "Bob", last_name: "Benson", mail_line1: "PO Box 123", mail_city: "Thereabouts", mail_state: "AK", mail_zip: "98765"},
+]
+person_sink = []
+address_sink = []
+
+migrate source, person_sink do
+    take :id, put: :id
+    take :first_name, put: :fname
+    take :last_name, put: :lname
+end
+
+migrate source, address_sink do
+    take :id, put: :person_id
+    take :mail_line1, put: :line1
+    take :mail_city, put: :city
+    take :mail_state, put: :state
+    take :mail_zip, put: :zip
+    static "Mailing", put: :role
+end
+```
+
+### Filling the Gaps
+
 If you find yourself writing the same block multiple times, you can instead write it as a proc and apply that to the Takes.
 
 ```ruby
@@ -174,12 +335,13 @@ source = [
 ]
 sink = []
 
+default_0 = proc do
+    # This reusable pipeline can be as complex as needed
+    default 0
+end
+
 migrate source, sink do
-    default_0 = proc do
-        # This reusable pipline can be as complex as needed
-        default 0
-    end
-    # Both of the following are equivilent
+    # Both of the following syntaxes are equivilent
     take :a, apply: default_0, put: "A"
     take :b do
         apply default_0
@@ -214,7 +376,6 @@ migrate source, sink do
         put "B"
     end
     # Or you can use the `update` and `value` methods directly in the main item block
-    # (`value=` is also supported if you prefer)
     take :c do
         if value % 2
             update "Odd"
@@ -241,6 +402,8 @@ module Micdrop
         def subtract(v)
             # Do whatever you like here; just make sure to save the result to @value
             @value = @value - v
+            # Also return `self` to enable method chaining
+            self
         end
     end
 end

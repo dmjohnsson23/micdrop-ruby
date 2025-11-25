@@ -431,6 +431,15 @@ module Micdrop
     end
 
     ##
+    # Format the data as a JSON string
+    def format_json
+      return self if @value.nil?
+
+      @value = JSON.generate @value
+      self
+    end
+
+    ##
     # Perform a regular expression match, setting the current value to the match data
     #
     # If a block is provided, it will act as a record context where captured groups can be taken.

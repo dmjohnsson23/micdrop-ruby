@@ -67,6 +67,16 @@ module Micdrop
     end
 
     ##
+    # Create a new key/value record which collections multiple `take`s into a single hash.
+    #
+    # Accepts all the same arguments as `take`. Then taken value will be a list of all constituent
+    # taken values. This is often used to join or concatenate items in the source in some way.
+    def collect_kv(hash, put: nil, convert: nil, apply: nil, &block)
+      value = hash.transform_values(&:value)
+      process_item_helper(value, put, convert, apply, block)
+    end
+
+    ##
     # collect multiple values into a format string
     def collect_format_string(template, *items, put: nil, convert: nil, apply: nil, &block)
       value = format template, *items.map(&:value)

@@ -8,6 +8,8 @@ module Micdrop
   class ItemContext # rubocop:disable Metrics/ClassLength
     extend Forwardable
 
+    @@registered_lookups = {}
+
     def initialize(record_context, value)
       @record_context = record_context
       @value = value
@@ -16,6 +18,12 @@ module Micdrop
 
     attr_reader :record_context, :original_value
     attr_accessor :value
+
+    ##
+    # Register a lookup, allowing it to be used in subsequent migrations
+    def self.register_lookup(name, lookup)
+      @@registered_lookups[name] = lookup
+    end
 
     ##
     # Directly update the current value
@@ -226,6 +234,12 @@ module Micdrop
     # apply_if_not_found, if provided, will be passed to an apply call if no match is found
     def lookup(mapping, pass_if_not_found: false, warn_if_not_found: nil, apply_if_not_found: nil)
       return self if @value.nil?
+
+      if mapping.is_a? Symbol
+        mapping = @@registered_lookups.fetch mapping do |key|
+          raise PipelineError, "No lookup '#{key}' found"
+        end
+      end
 
       warn_if_not_found = true if warn_if_not_found.nil? && apply_if_not_found.nil?
       @value = mapping.fetch @value do |v|

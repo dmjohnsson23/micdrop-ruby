@@ -15,4 +15,9 @@ module Micdrop
   # An error with the current data value that prevents conversion operations from working
   class ValueError < StandardError
   end
+
+  ##
+  # An error with the data pipeline iteself
+  class PipelineError < StandardError
+  end
 end

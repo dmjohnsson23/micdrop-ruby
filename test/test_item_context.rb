@@ -351,6 +351,14 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
 
     it "behaves appropriately when passed an unknown value"
+
+    it "can take a symbol to reference a registered lookup" do
+      Micdrop::ItemContext.register_lookup :test_lookup_1, { "one" => 1, "two" => 2, "three" => 3 }
+      ctx = Micdrop::ItemContext.new(nil, "two")
+      _(ctx.lookup(:test_lookup_1)).must_be_same_as ctx
+
+      _(ctx.value).must_equal 2
+    end
   end
 
   describe :string_replace do

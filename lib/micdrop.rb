@@ -40,6 +40,12 @@ module Micdrop
     end
   end
 
+  ##
+  # Register a lookup, allowing it to be used in subsequent migrations
+  def self.register_lookup(name, lookup)
+    ItemContext.register_lookup name, lookup
+  end
+
   def self.migrate_item_helper(from, to, loop_item, loop_index, &block)
     ctx = RootRecordContext.new(from, to, loop_item, loop_index)
     ctx.instance_eval(&block)

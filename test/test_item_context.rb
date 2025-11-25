@@ -336,9 +336,18 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
 
     it "optionally passes the original value on an unknown value" do
       ctx = Micdrop::ItemContext.new(nil, "C")
-      _(ctx.lookup({ "A" => 1, "B" => 2 }, pass_if_not_found: true)).must_be_same_as ctx
+      _(ctx.lookup({ "A" => 1, "B" => 2 }, warn_if_not_found: false, pass_if_not_found: true)).must_be_same_as ctx
 
       _(ctx.value).must_equal "C"
+    end
+
+    it "optionally applies a pipeline on an unknown value" do
+      ctx = Micdrop::ItemContext.new(nil, "C")
+      _(ctx.lookup({ "A" => 1, "B" => 2 }, warn_if_not_found: false, apply_if_not_found: proc {
+        update 3
+      })).must_be_same_as ctx
+
+      _(ctx.value).must_equal 3
     end
 
     it "behaves appropriately when passed an unknown value"
@@ -439,6 +448,64 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
 
       _(ctx.value).must_equal "A: 1\nB: 2"
     end
+  end
+
+  describe :coalesce do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      _(ctx.coalesce).must_be_same_as ctx
+
+      _(ctx.value).must_be_nil
+    end
+    it "handles an empty list gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, [])
+      _(ctx.coalesce).must_be_same_as ctx
+
+      _(ctx.value).must_be_nil
+    end
+    it "takes the first value if not nil" do
+      ctx = Micdrop::ItemContext.new(nil, [1, 2, nil, 4])
+      _(ctx.coalesce).must_be_same_as ctx
+
+      _(ctx.value).must_equal 1
+    end
+    it "takes the second if the first is nil" do
+      ctx = Micdrop::ItemContext.new(nil, [nil, 2, 3, 4])
+      _(ctx.coalesce).must_be_same_as ctx
+
+      _(ctx.value).must_equal 2
+    end
+  end
+  describe :compact do
+  end
+  describe :filter do
+  end
+
+  describe :map do
+  end
+
+  describe :map_apply do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      _(ctx.map_apply { update value + 1 }).must_be_same_as ctx
+
+      _(ctx.value).must_be_nil
+    end
+    it "handles an empty list gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, [])
+      _(ctx.map_apply { update value + 1 }).must_be_same_as ctx
+
+      _(ctx.value).must_equal []
+    end
+    it "applies a pipeline to each element" do
+      ctx = Micdrop::ItemContext.new(nil, [1, 2, 3])
+      _(ctx.map_apply { update value + 1 }).must_be_same_as ctx
+
+      _(ctx.value).must_equal [2, 3, 4]
+    end
+  end
+
+  describe :each_subrecord do
   end
 
   describe :parse_json do

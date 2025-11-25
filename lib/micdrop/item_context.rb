@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require "date"
+require "forwardable"
 require "json"
 
 module Micdrop
   class ItemContext # rubocop:disable Metrics/ClassLength
+    extend Forwardable
+
     def initialize(record_context, value)
       @record_context = record_context
       @value = value
@@ -46,9 +49,15 @@ module Micdrop
     end
 
     ##
-    # Alias for enter.take
+    # Alias for scope.enter.take
     def take(name, put: nil, convert: nil, apply: nil, &block)
-      enter.take(name, put: put, convert: convert, apply: apply, &block)
+      scope.enter.take(name, put: put, convert: convert, apply: apply, &block)
+    end
+
+    ##
+    # Alias for scope.enter.try_take
+    def try_take(name, put: nil, convert: nil, apply: nil, &block)
+      scope.enter.try_take(name, put: put, convert: convert, apply: apply, &block)
     end
 
     ##
@@ -87,17 +96,7 @@ module Micdrop
       self
     end
 
-    ##
-    # Skip the current record. This is similar to a plain-ruby `next` statement.
-    def skip
-      raise Skip
-    end
-
-    ##
-    # Stop processing values from the source. This is similar to a plain-ruby `break` statement.
-    def stop
-      raise Stop
-    end
+    def_delegators :@record_context, :static, :index, :collect_format_string, :collect_list, :stop, :skip, :flush
 
     ### Debug transformers ###
 
@@ -220,12 +219,23 @@ module Micdrop
 
     ##
     # Lookup the value in a hash
-    def lookup(mapping, pass_if_not_found: false)
+    #
+    # pass_if_not_found, if true, will cause the value to pass through the lookup unchanged if no
+    # match is found. If false, the value will instead be set to nil.
+    #
+    # apply_if_not_found, if provided, will be passed to an apply call if no match is found
+    def lookup(mapping, pass_if_not_found: false, warn_if_not_found: nil, apply_if_not_found: nil)
       return self if @value.nil?
 
+      warn_if_not_found = true if warn_if_not_found.nil? && apply_if_not_found.nil?
       @value = mapping.fetch @value do |v|
-        warn format "Value %s not found in lookup", v
-        v if pass_if_not_found
+        warn format "Value %s not found in lookup", v if warn_if_not_found
+        if !apply_if_not_found.nil?
+          apply apply_if_not_found
+          value
+        elsif pass_if_not_found
+          v
+        end
       end
       self
     end
@@ -342,6 +352,56 @@ module Micdrop
 
       @value = @value.compact
       self
+    end
+
+    ##
+    # Filter out values from a list based on a predicate
+    def filter(&predicate)
+      return self if @value.nil?
+
+      @value = @value.filter(&predicate)
+      self
+    end
+
+    ##
+    # Map the values in an array using a block
+    def map(&block)
+      return self if @value.nil?
+
+      @value = @value.map(&block)
+      self
+    end
+
+    ##
+    # Alternate version of map that takes a pipeline block which will be executed in an item context.
+    #
+    # This allows transforming individual items in a list using all of the micdrop operation methods.
+    def map_apply(&block)
+      return self if @value.nil?
+
+      rec_ctx = SubRecordContext.new self, @record_context
+      @value = @value.map do |v|
+        item_ctx = ItemContext.new rec_ctx, v
+        item_ctx.apply(block).value
+      end
+      self
+    end
+
+    ##
+    # Iterate an array or array-like object and run a block in the subrecord context of each
+    #
+    # Optionally flush and/or reset after each iteration. This is used to import multiple sink
+    # records from a single source record, such as, for example, a source record that contians a
+    # JSON list of multiple items.
+    def each_subrecord(flush: false, reset: false, &block)
+      rec_ctx = SubRecordContext.new self, @record_context
+      @value.each do |v|
+        item_ctx = ItemContext.new rec_ctx, v
+        ctx = SubRecordContext.new item_ctx, rec_ctx
+        ctx.instance_eval(&block)
+        @record_context.flush reset: false if flush
+        @record_context.reset if reset
+      end
     end
 
     ##

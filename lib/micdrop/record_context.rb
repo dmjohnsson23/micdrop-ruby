@@ -26,6 +26,21 @@ module Micdrop
     end
 
     ##
+    # Take a value if possible, or take nil otherwise
+    def try_take(name, put: nil, convert: nil, apply: nil, &block)
+      value = @record&.fetch(name, nil)
+      process_item_helper(value, put, convert, apply, block)
+    end
+
+    ##
+    # A combined take/put shorthand, for migrations where many of the column names are the same
+    def passthru(*names)
+      names.each do
+        take(name, put: name)
+      end
+    end
+
+    ##
     # `static` is a variant of `take` that, instead of actually taking data from the source record,
     # allows you to specify your own value. This is usually used to supply values which are not
     # provided in the source, but required in the sink.

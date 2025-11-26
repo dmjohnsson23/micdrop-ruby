@@ -9,10 +9,12 @@ Extensible framework/library to migrate data from source to another using a more
 At its core, the library's operation is quite simple: loop over the rows of the source data, perform some transformations, and output the transformed data to the sink.
 
 ```ruby
+# Many types can be used as sources and sinks, including CSV files and Sequel Datasets
 source = CSV.read("data_source.csv", headers:true)
-sink = Micdrop::Ext::Sequel::InsertSink.new DB[:destination_table]
+sink = DB[:destination_table]
 
-migrate source, sink do
+# Migrations define how data from the source is transformed to go into the sink
+Micdrop.migrate source, sink do
     take "Name", put: :name
     take "Birth Date" do
         parse_date "%m/%d/%y"
@@ -29,7 +31,7 @@ end
 
 > **Note:**
 > 
-> This is a re-implementation in Ruby of my [previous attempt](https://github.com/dmjohnsson23/micdrop) at this concept in Python. Ruby provides a far superior syntax for this concept than Python. The Python version, however, it far more feature-complete, whereas this version is still in early development.
+> This is a re-implementation in Ruby of my [previous attempt](https://github.com/dmjohnsson23/micdrop) at this concept in Python. Ruby provides a far superior syntax for this concept than Python. This version does not yet have the full feature set of the Python version, but is still quite usable.
 
 ## Terminology
 
@@ -75,7 +77,7 @@ source = [
 # complex use-cases.
 sink = []
 
-migrate source, sink do # This block is executed for every record in the source
+Micdrop.migrate source, sink do # This block is executed for every record in the source
     # If no conversion is needed, you can simply Take items and Put them in the appropriate place
     take :a, put: "A"
     take :b, put: "B"
@@ -99,7 +101,7 @@ source = [
 ]
 sink = []
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :a, put: "A" do
         parse_boolean
     end
@@ -139,7 +141,7 @@ source = [
 ]
 sink = []
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :some do
         scope do
             # The `scope` method prevents operations in this block from affecting the value in 
@@ -183,7 +185,7 @@ source = [
 ]
 sink = []
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :person, put: :person_id
     collect_list(take(:home_phone), take(:work_phone), take(:cell_phone)) do
         # Here, the value is a list containing the values of all three `take`s
@@ -207,7 +209,7 @@ There are several other methods that are useful for operating on collected lists
 In addition to `collect_list`, there is also `collect_kv` which takes a hash of `take`s as the first argument:
 
 ```ruby
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :person, put: :person_id
     collect_kv({"Home"=>take(:home_phone), "Work"=>take(:work_phone), "Cell"=>take(:cell_phone)}) do
         # Here, the value is a hash containing the values of all three `take`s
@@ -219,7 +221,7 @@ And also `collect_format_string`, which collects multiple items into a format st
 
 
 ```ruby
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :person, put: :person_id
     collect_format_string("Home: %s, Work: %s, Cell: %s", take(:home_phone), take(:work_phone), take(:cell_phone)) do
         # Here, the value is a string with the `take`n values inserted
@@ -238,7 +240,7 @@ source = [
 ]
 sink = []
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :person, put: :person_id
     take :home_phone, put: :number
     static "Home", put: :type
@@ -277,7 +279,7 @@ source = [
 ]
 sink = []
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     # Save this so we can `put` it separately in each record
     person_id = take :person
     # Iterate each address, and automatically flush and reset after each
@@ -309,13 +311,13 @@ source = [
 person_sink = []
 address_sink = []
 
-migrate source, person_sink do
+Micdrop.migrate source, person_sink do
     take :id, put: :id
     take :first_name, put: :fname
     take :last_name, put: :lname
 end
 
-migrate source, address_sink do
+Micdrop.migrate source, address_sink do
     take :id, put: :person_id
     take :mail_line1, put: :line1
     take :mail_city, put: :city
@@ -342,7 +344,7 @@ default_0 = proc do
     default 0
 end
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     # Both of the following syntaxes are equivilent
     take :a, apply: default_0, put: "A"
     take :b do
@@ -369,7 +371,7 @@ source = [
 ]
 sink = []
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     # You can pass a proc (or symbol) to the `convert` parameter
     take :a, convert: proc {it + 1}, put: "A"
     # Or you can use a `convert` block
@@ -410,7 +412,7 @@ module Micdrop
     end
 end
 
-migrate source, sink do
+Micdrop.migrate source, sink do
     take :a do
         subtract 1
         put "A"

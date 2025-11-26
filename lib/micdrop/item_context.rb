@@ -63,6 +63,12 @@ module Micdrop
     end
 
     ##
+    # Alias for scope.enter.take_dig
+    def take_dig(*keys, put: nil, convert: nil, apply: nil, &block)
+      scope.enter.take_dig(*keys, put: put, convert: convert, apply: apply, &block)
+    end
+
+    ##
     # Alias for scope.enter.try_take
     def try_take(name, put: nil, convert: nil, apply: nil, &block)
       scope.enter.try_take(name, put: put, convert: convert, apply: apply, &block)
@@ -85,6 +91,15 @@ module Micdrop
       return self if @value.nil?
 
       @value = @value[name]
+      self
+    end
+
+    ##
+    # Extract using the :dig method instead of :[]
+    def extract_dig(*keys)
+      return self if @value.nil?
+
+      @value = @value.dig(*keys)
       self
     end
 

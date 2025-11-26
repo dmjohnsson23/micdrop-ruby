@@ -165,6 +165,8 @@ migrate source, sink do
     # If you only need a single item in a deeply nested structure, you can chain all the  methods 
     # directly on the `take` as well
     take(:some).extract(:deeply).extract(:nested).extract(:stuff).put(:some_deeply_nested_stuff)
+    # Or even use `take_dig`
+    take_dig :some, :deeply, :nested, :stuff, put: :some_deeply_nested_stuff
 end
 ```
 

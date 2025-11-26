@@ -25,6 +25,12 @@ module Micdrop
       process_item_helper(value, put, convert, apply, block)
     end
 
+    # Take a value using the :dig method instead of :[]
+    def take_dig(*keys, put: nil, convert: nil, apply: nil, &block)
+      value = @record&.dig(*keys)
+      process_item_helper(value, put, convert, apply, block)
+    end
+
     ##
     # Take a value if possible, or take nil otherwise
     def try_take(name, put: nil, convert: nil, apply: nil, &block)

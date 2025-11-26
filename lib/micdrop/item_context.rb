@@ -132,7 +132,7 @@ module Micdrop
       self
     end
 
-    ### Basic transformers ###
+    ### Basic parse/format transformers ###
 
     ##
     # Parse a value to an integer
@@ -240,6 +240,8 @@ module Micdrop
       self
     end
 
+    ### Common operations ###
+
     ##
     # Lookup the value in a hash
     #
@@ -284,20 +286,6 @@ module Micdrop
     end
 
     ##
-    # Re-encode a string in the given encoding
-    def encode(encoding)
-      @value = @value.encode(encoding) unless value.nil?
-      self
-    end
-
-    ##
-    # Change the encoding of the current string without transcoding
-    def force_encoding(encoding)
-      @value = @value.force_encoding(encoding) unless value.nil?
-      self
-    end
-
-    ##
     # Treats empty strings as nil
     def empty_to_nil
       @value = nil if @value == ""
@@ -308,6 +296,38 @@ module Micdrop
     # Provide a default value if the current value is nill
     def default(default_value)
       @value = default_value if @value.nil?
+      self
+    end
+
+    ### String encoding & binary functions ###
+
+    ##
+    # Unpack binary data (using String.unpack)
+    def unpack(template, offset: 0)
+      @value = value.unpack template, offset: offset unless @value.nil?
+      self
+    end
+
+    ##
+    # Pack binary data (using Array.pack)
+    def pack(template)
+      @value = value.pack template unless @value.nil?
+      self
+    end
+
+    ##
+    # Re-encode a string in the given encoding
+    #
+    # Takes the same args and options as String.encode
+    def encode(*encoding, **options)
+      @value = @value.encode(*encoding, **options) unless value.nil?
+      self
+    end
+
+    ##
+    # Change the encoding of the current string without transcoding
+    def force_encoding(encoding)
+      @value = @value.force_encoding(encoding) unless value.nil?
       self
     end
 
@@ -433,6 +453,8 @@ module Micdrop
       end
     end
 
+    ### Advanced parsing/formatting ###
+
     ##
     # Parse a string as JSON
     #
@@ -470,6 +492,10 @@ module Micdrop
 
     private
 
+    ##
+    # Make a "zero date" (e.g. 000-00-000) in the given format.
+    #
+    # Some systems store dates in this format as a representation of an empty or null date.
     def make_zero_date(format)
       ::DateTime.new(2000, 2, 2, 2, 2, 2).strftime(format).gsub!("2", "0")
     end

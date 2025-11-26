@@ -172,7 +172,7 @@ class TestSequel < Minitest::Test
     ], sink
   end
 
-  def test_live_lookup # rubocop:disable Metrics/MethodLength,Metrics/AbcSize
+  def test_db_lookup # rubocop:disable Metrics/MethodLength
     source = @db[:inventory].all
     sink = []
 
@@ -181,11 +181,11 @@ class TestSequel < Minitest::Test
 
     Micdrop.migrate source, sink do
       take :person do
-        update people.where(id: value).get(:first_name)
+        db_lookup people, :id, :first_name
         put :name
       end
       take :asset_type do
-        update asset_type.where(id: value).get(:label)
+        db_lookup asset_type, :id, :label
         put :asset
       end
       take :count, put: :count

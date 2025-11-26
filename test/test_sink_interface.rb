@@ -8,14 +8,18 @@ module IsSink
       it "responds to <<" do
         _(@object).must_respond_to :<<
       end
-      it "responds to make_collector" do
-        _(@object).must_respond_to :make_collector
-      end
-      it "make_collector returns an item that responds to []=" do
-        _(@object.make_collector).must_respond_to :[]=
-      end
-      it "push accepts a value returned by make_collector" do
-        @object.push @object.make_collector
+
+      if @object.respond_to? :make_collector
+        it "make_collector returns an item that responds to []=" do
+          _(@object.make_collector).must_respond_to :[]=
+        end
+        it "<< accepts a value returned by make_collector" do
+          @object << @object.make_collector
+        end
+      else
+        it "<< accepts a hash" do
+          @object << {}
+        end
       end
     end
   end
@@ -25,6 +29,6 @@ describe "ArraySink" do
   include IsSink
 
   before do
-    @object = Micdrop::ArraySink.new
+    @object = []
   end
 end

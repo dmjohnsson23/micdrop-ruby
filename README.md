@@ -229,6 +229,33 @@ Micdrop.migrate source, sink do
 end
 ```
 
+Finally, you can also create nested structures on the fly using the `put_bury` method in place of the normal `put`.
+
+
+```ruby
+Micdrop.migrate source, sink do
+    take :person, put: :person_id
+    take :home_phone do
+        put_bury :phones, :home unless value.nil?
+    end
+    take :work_phone do
+        put_bury :phones, :work unless value.nil?
+    end
+    take :cell_phone do
+        put_bury :phones, :cell unless value.nil?
+    end
+end
+
+# `sink` now looks like this:
+
+[
+    { person_id: 1, phones: {work: "(354) 756-4796", cell: "(234) 678-7564"} },
+    { person_id: 2, phones: {home: "(867) 123-9748", cell: "(475) 364-8365"} },
+]
+```
+
+`put_bury` operates similarly to Ruby's standard `dig` method, but in reverse.
+
 ### Creating Multiple Output Records
 
 For instances where a single source record maps to multiple sink records, there are techniques for outputting multiple records. The first is simply to use `flush`.

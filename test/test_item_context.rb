@@ -139,6 +139,18 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe :put_bury do
+    before do
+      @rec = Micdrop::RootRecordContext.new nil, nil, { a: 1, b: 2, c: 3 }
+      @ctx = @rec.take :a
+    end
+    it "puts nested values" do
+      @ctx.put_bury :deeply, :nested, :key
+
+      _(@rec.collector).must_equal({ deeply: { nested: { key: 1 } } })
+    end
+  end
+
   describe :parse_date do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)

@@ -139,6 +139,16 @@ module Micdrop
     end
 
     ##
+    # Put a value in the sink, using nested keys. (This is an inverse of :dig)
+    #
+    # You typically won't use this directly.
+    def put_bury(keys, value)
+      sb = StructureBuilder.new @collector
+      sb.bury value, *keys
+      @dirty = true
+    end
+
+    ##
     # Flush all currently put values to the sink, optionally resetting as well.
     def flush(reset: true)
       return unless @dirty
@@ -149,7 +159,7 @@ module Micdrop
 
     ##
     # Debug tool to print the current sink collector to the console
-    def inspect_collector(prefix = nil)
+    def dump_collector(prefix = nil)
       puts prefix unless prefix.nil?
       puts @collector.inspect
       puts "\n"
@@ -180,6 +190,6 @@ module Micdrop
     end
 
     def_delegators :@parent_record_context, :source, :sink, :loop_item, :loop_index, :collector, :put, :flush,
-                   :inspect_collector, :reset
+                   :dump_collector, :reset
   end
 end

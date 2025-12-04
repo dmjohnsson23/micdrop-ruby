@@ -119,13 +119,22 @@ module Micdrop
       self
     end
 
+    ##
+    # Put the value into a nested structure.
+    #
+    # This is the opposite of :dig, allowing you to build up structure on the fly without manually
+    # constructing arrays and hashes. (This does require the collector to be a simple array or hash.)
+    def put_bury(*keys)
+      @record_context.put_bury keys, @value
+    end
+
     def_delegators :@record_context, :static, :index, :collect_format_string, :collect_list, :stop, :skip, :flush
 
     ### Debug transformers ###
 
     ##
     # Debug tool to print the current value to the console
-    def inspect(prefix = nil)
+    def dump(prefix = nil)
       puts prefix unless prefix.nil?
       puts @value
       puts "\n"

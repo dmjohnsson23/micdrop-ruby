@@ -5,6 +5,7 @@ require_relative "micdrop/files_source"
 require_relative "micdrop/item_context"
 require_relative "micdrop/record_context"
 require_relative "micdrop/stop_skip"
+require_relative "micdrop/structure_builder"
 require_relative "micdrop/version"
 
 module Micdrop

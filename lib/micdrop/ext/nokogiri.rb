@@ -13,6 +13,12 @@ module Micdrop
     end
 
     ##
+    # Alias for scope.enter.take_node_name
+    def take_node_name(put: nil, convert: nil, apply: nil, &block)
+      scope.enter.take_node_name(put: put, convert: convert, apply: apply, &block)
+    end
+
+    ##
     # Parse HTML and enter a sub-record context for the root node
     def parse_html(&block)
       doc = @value.nil? ? nil : ::Nokogiri::HTML.parse(@value)
@@ -124,7 +130,7 @@ module Micdrop
     def nokogiri_node_subrecord_helper(node, block)
       item_ctx = ItemContext.new @record_context, node
       subrec_ctx = SubRecordContext.new item_ctx, @record_context
-      subrec_ctx.instance_eval(&block)
+      subrec_ctx.instance_eval(&block) unless block.nil?
       subrec_ctx
     end
   end
@@ -136,6 +142,13 @@ module Micdrop
     # Take the text content of the XML or HTML node
     def take_content(put: nil, convert: nil, apply: nil, &block)
       value = @record&.content
+      process_item_helper(value, put, convert, apply, block)
+    end
+
+    ##
+    # Take the node name of the XML or HTML node
+    def take_node_name(put: nil, convert: nil, apply: nil, &block)
+      value = @record&.node_name
       process_item_helper(value, put, convert, apply, block)
     end
 
@@ -160,7 +173,7 @@ module Micdrop
     def nokogiri_node_subrecord_helper(node, block)
       item_ctx = ItemContext.new self, node
       subrec_ctx = SubRecordContext.new item_ctx, self
-      subrec_ctx.instance_eval(&block)
+      subrec_ctx.instance_eval(&block) unless block.nil?
       subrec_ctx
     end
   end

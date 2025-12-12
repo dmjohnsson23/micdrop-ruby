@@ -20,14 +20,14 @@ describe "Micdrop::Ext::Nokogiri" do # rubocop:disable Metrics/BlockLength
   describe :parse_html5 do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      subctx = ctx.parse_html5 {}
+      subctx = ctx.parse_html5
       _(subctx).must_be_instance_of Micdrop::SubRecordContext
 
       _(subctx.record).must_be_nil
     end
     it "parses html" do
       ctx = Micdrop::ItemContext.new(nil, SAMPLE_HTML5_1)
-      subctx = ctx.parse_html5 {}
+      subctx = ctx.parse_html5
       _(subctx).must_be_instance_of Micdrop::SubRecordContext
       _(subctx.record).must_be_instance_of Nokogiri::HTML5::Document
     end
@@ -39,14 +39,14 @@ describe "Micdrop::Ext::Nokogiri" do # rubocop:disable Metrics/BlockLength
 
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)
-      subctx = ctx.parse_html5_fragment {}
+      subctx = ctx.parse_html5_fragment
       _(subctx).must_be_instance_of Micdrop::SubRecordContext
 
       _(subctx.record).must_be_nil
     end
     it "parses html" do
       ctx = Micdrop::ItemContext.new(nil, SAMPLE_HTML5_FRAGMENT_1)
-      subctx = ctx.parse_html5_fragment {}
+      subctx = ctx.parse_html5_fragment
       _(subctx).must_be_instance_of Micdrop::SubRecordContext
       _(subctx.record).must_be_instance_of Nokogiri::HTML5::DocumentFragment
     end
@@ -93,7 +93,7 @@ describe "Micdrop::Ext::Nokogiri" do # rubocop:disable Metrics/BlockLength
       item = Micdrop::ItemContext.new(nil, ::Nokogiri::HTML5.parse(SAMPLE_HTML5_1))
       ctx = Micdrop::SubRecordContext.new(item, nil)
 
-      sub = ctx.at_css(".price") {}
+      sub = ctx.at_css(".price")
       _(sub).must_be_instance_of Micdrop::SubRecordContext
       _(sub.record).must_be_instance_of Nokogiri::XML::Element
       _(sub.record.content).must_equal "$999.99"

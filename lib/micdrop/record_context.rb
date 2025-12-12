@@ -39,6 +39,18 @@ module Micdrop
     end
 
     ##
+    # Take the entire record as a single item
+    def take_whole(put: nil, convert: nil, apply: nil, &block)
+      process_item_helper(record, put, convert, apply, block)
+    end
+
+    ##
+    # alias for take_whole.each_subrecord
+    def each_subrecord(flush: false, reset: false, &block)
+      take_whole.each_subrecord(flush: flush, reset: reset, &block)
+    end
+
+    ##
     # A combined take/put shorthand, for migrations where many of the column names are the same
     def passthru(*names)
       names.each do

@@ -20,3 +20,7 @@ end
 group :csv, optional: true do
   gem "csv", "~> 3.3"
 end
+
+group :nokogiri, optional: true do
+  gem "nokogiri", "~> 1.18"
+end

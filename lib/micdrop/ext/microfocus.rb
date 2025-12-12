@@ -203,4 +203,38 @@ module Micdrop
       end
     end
   end
+
+  ##
+  # Extend ItemContext with parse_microfocus
+  class ItemContext
+    ##
+    # Parse a string as JSON
+    #
+    # If a block is provided, it will act as a record context where object properties can be taken.
+    #
+    # If include_header is true, the value will be a hash containing both the header information
+    # and the actual records.
+    def parse_microfocus(include_header: false, unpack_spec: nil, unpack_mapping: nil, &block)
+      return self if @value.nil?
+
+      reader = Micdrop::Ext::Microfocus::MicroFocusReader.new @value, unpack_spec: unpack_spec,
+                                                                      unpack_mapping: unpack_mapping
+      @value = if include_header
+                 {
+                   creation_time: reader.creation_time,
+                   compression: reader.compression,
+                   index_type: reader.index_type,
+                   variable_length: reader.variable_length,
+                   min_legth: reader.min_legth,
+                   max_length: reader.max_length,
+                   index_version: reader.index_version,
+                   records: reader.each.entries
+                 }
+               else
+                 reader.each.entries
+               end
+      enter(&block) unless block.nil?
+      self
+    end
+  end
 end

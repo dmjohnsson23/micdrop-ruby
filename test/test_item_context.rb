@@ -331,6 +331,29 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe :send do
+    it "handles nil gracefully" do
+      ctx = Micdrop::ItemContext.new(nil, nil)
+      _(ctx.send(:stuff)).must_be_same_as ctx
+
+      _(ctx.value).must_be_nil
+    end
+
+    it "reads an attribute accessor" do
+      ctx = Micdrop::ItemContext.new(nil, "A")
+      _(ctx.send(:hash)).must_be_same_as ctx
+
+      _(ctx.value).must_equal "A".hash
+    end
+
+    it "calls a method with arguments" do
+      ctx = Micdrop::ItemContext.new(nil, "cruel world")
+      _(ctx.send(:scan, /\w+/)).must_be_same_as ctx
+
+      _(ctx.value).must_equal %w[cruel world]
+    end
+  end
+
   describe :lookup do
     it "handles nil gracefully" do
       ctx = Micdrop::ItemContext.new(nil, nil)

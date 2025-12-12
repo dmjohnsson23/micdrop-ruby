@@ -251,6 +251,13 @@ module Micdrop
 
     ### Common operations ###
 
+    def send(*args)
+      return self if @value.nil?
+
+      @value = @value.send(*args)
+      self
+    end
+
     ##
     # Lookup the value in a hash
     #

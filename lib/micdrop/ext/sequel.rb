@@ -12,8 +12,10 @@ module Micdrop
           @dataset = dataset
         end
 
+        attr_reader :insert_id
+
         def <<(collector)
-          @dataset.insert(**collector)
+          @insert_id = @dataset.insert(**collector)
         end
       end
 
@@ -56,6 +58,8 @@ module Micdrop
           @match_empty_key = match_empty_key
         end
 
+        attr_reader :insert_id, :was_insert
+
         def <<(collector)
           dataset = @dataset
           @key_columns.each do |col|
@@ -65,9 +69,12 @@ module Micdrop
           if existing.count > 1
             raise Micdrop::SinkError, "Key column(s) of this InsertUpdateSink are not unique"
           elsif existing.empty?
-            dataset.insert(**collector)
+            @insert_id = dataset.insert(**collector)
+            @was_insert = true
           else
             dataset.update(**update_merge(existing.first, collector))
+            @insert_id = nil
+            @was_insert = false
           end
         end
 
@@ -101,10 +108,15 @@ module Micdrop
   ##
   # Sequel-specific extensions for ItemContext
   class ItemContext
-    def db_lookup(dataset, key_col, val_col, pass_if_not_found: false, warn_if_not_found: nil, apply_if_not_found: nil)
+    def db_lookup(dataset, key_col, val_col = nil, pass_if_not_found: false, warn_if_not_found: nil,
+                  apply_if_not_found: nil)
       # TODO: allow registering db_lookups like we do normal lookups
       warn_if_not_found = true if warn_if_not_found.nil? && apply_if_not_found.nil?
-      found = dataset.where(key_col => @value).get(val_col)
+      found = if val_col.nil?
+                dataset.where(key_col => @value).first
+              else
+                dataset.where(key_col => @value).get(val_col)
+              end
       if found.nil?
         warn format "Value %s not found in db_lookup", @value if warn_if_not_found
         if !apply_if_not_found.nil?

@@ -95,6 +95,7 @@ class TestSequel < Minitest::Test
       take :status, put: :status
     end
 
+    assert_equal 4, sink.insert_id
     prince = @db[:people].where(id: 4).all
 
     assert_equal [
@@ -131,6 +132,8 @@ class TestSequel < Minitest::Test
       { id: 4, title: "Prince", first_name: "", last_name: "Humperdink", status: "alive" }
     ]
     sink = Micdrop::Ext::Sequel::InsertUpdateSink.new(@db[:people], :id)
+    insert_ids = []
+    insert_count = 0
 
     Micdrop.migrate source, sink do
       take :id, put: :id
@@ -138,10 +141,16 @@ class TestSequel < Minitest::Test
       take :last_name, put: :last_name
       take :title, put: :title
       take :status, put: :status
+      after_flush do |record, _collected|
+        insert_ids << record.sink.insert_id
+        insert_count += 1 if record.sink.was_insert
+      end
     end
 
     people = @db[:people].all
 
+    assert_equal [nil, nil, nil, 4], insert_ids
+    assert_equal 1, insert_count
     assert_equal source, people
   end
 
@@ -186,6 +195,35 @@ class TestSequel < Minitest::Test
       end
       take :asset_type do
         db_lookup asset_type, :id, :label
+        put :asset
+      end
+      take :count, put: :count
+    end
+
+    assert_equal [
+      { name: "Wesley", asset: "True Love", count: 1 },
+      { name: "Wesley", asset: "Iocane Powder", count: 1 },
+      { name: "Inigo", asset: "Wheelbarrow", count: 1 },
+      { name: "Buttercup", asset: "True Love", count: 0 }
+    ], sink
+  end
+
+  def test_db_lookup_without_value_col # rubocop:disable Metrics/MethodLength
+    source = @db[:inventory].all
+    sink = []
+
+    people = @db[:people]
+    asset_type = @db[:asset_type]
+
+    Micdrop.migrate source, sink do
+      take :person do
+        db_lookup people, :id
+        extract :first_name
+        put :name
+      end
+      take :asset_type do
+        db_lookup asset_type, :id
+        extract :label
         put :asset
       end
       take :count, put: :count

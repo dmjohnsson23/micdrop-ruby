@@ -446,3 +446,15 @@ Micdrop.migrate source, sink do
     end
 ```
 
+If needed, you can also use the `before_flush` or `after_flush` hooks to add actions before or after the flush. Both take the same form:
+
+```ruby
+Micdrop.migrate source, sink do
+    after_flush do |record, collected|
+        # `record` is the RootRecordContext, `collected` is the hash of `put` values.
+        # For example, you could do something like this if the sink was a Sequel InsertSource
+        puts "Inserted ID #{record.sink.insert_id} with data #{collected.inspect}"
+    end
+    # Then do your normal migration operations here
+end
+```

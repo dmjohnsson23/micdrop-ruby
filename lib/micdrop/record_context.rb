@@ -101,8 +101,6 @@ module Micdrop
       process_item_helper(value, put, convert, apply, block)
     end
 
-    # TODO: collect_hash (not sure what the signature of it should be?)
-
     ##
     # Skip the current record. This is similar to a plain-ruby `next` statement.
     def skip
@@ -136,6 +134,8 @@ module Micdrop
       @loop_item = loop_item
       @record = loop_item
       @loop_index = loop_index
+      @before_flush = nil
+      @after_flush = nil
       reset
     end
 
@@ -165,7 +165,9 @@ module Micdrop
     def flush(reset: true)
       return unless @dirty
 
+      @before_flush&.call self, @collector
       @sink << @collector
+      @after_flush&.call self, @collector
       self.reset if reset
     end
 
@@ -187,6 +189,22 @@ module Micdrop
                    else
                      {}
                    end
+    end
+
+    ##
+    # Allows specifying a hook which will run before flush. The block will receive the record and the collector.
+    #
+    # Note that this must be called *before* any manual flush occurs to have any effect.
+    def before_flush(&block)
+      @before_flush = block
+    end
+
+    ##
+    # Allows specifying a hook which will run after flush. The block will receive the record and the collector.
+    #
+    # Note that this must be called *before* any manual flush occurs to have any effect.
+    def after_flush(&block)
+      @after_flush = block
     end
   end
 

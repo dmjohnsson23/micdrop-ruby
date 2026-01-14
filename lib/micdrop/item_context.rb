@@ -128,7 +128,8 @@ module Micdrop
       @record_context.put_bury keys, @value
     end
 
-    def_delegators :@record_context, :static, :index, :collect_format_string, :collect_list, :stop, :skip, :flush
+    def_delegators :@record_context, :static, :index, :collect_format_string, :collect_list, :collect_kv, :stop, :skip,
+                   :flush
 
     ### Debug transformers ###
 

@@ -38,6 +38,8 @@ module Micdrop
     else
       # TODO: error
     end
+    from.close if from.respond_to? :close
+    to.close if to.respond_to? :close
   end
 
   ##

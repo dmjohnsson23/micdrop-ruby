@@ -21,10 +21,12 @@ describe "Micdrop::Ext::JsonLines" do # rubocop:disable Metrics/BlockLength
       file.rewind
       source = Micdrop::Ext::JsonLines::JsonLinesSource.new(file)
       records = source.each.to_a
+      source.close
 
       _(records.count).must_equal 2
       _(records[0]["a"]).must_equal 1
       _(records[1]["a"]).must_equal 2
+      _(file.closed?).must_be_same_as true
     end
   end
 
@@ -42,9 +44,11 @@ describe "Micdrop::Ext::JsonLines" do # rubocop:disable Metrics/BlockLength
       
       sink << ({a:1})
       sink << ({a:2})
-
+      
       file.rewind
       _(file.read).must_equal "{\"a\":1}\n{\"a\":2}\n"
+      sink.close
+      _(file.closed?).must_be_same_as true
     end
   end
 end

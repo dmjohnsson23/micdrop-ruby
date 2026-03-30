@@ -35,12 +35,12 @@ describe Micdrop::ItemContext do # rubocop:disable Metrics/BlockLength
       _(@ctx.value).must_equal 20
     end
     it "can be run with a proc" do
-      _(@ctx.convert(proc { it * 2 })).must_be_same_as @ctx
+      _(@ctx.convert(proc { |v| v * 2 })).must_be_same_as @ctx
 
       _(@ctx.value).must_equal 20
     end
     it "can be run with a block" do
-      _(@ctx.convert { it * 2 }).must_be_same_as @ctx
+      _(@ctx.convert { |v| v * 2 }).must_be_same_as @ctx
 
       _(@ctx.value).must_equal 20
     end

@@ -33,7 +33,7 @@ class TestMicdrop < Minitest::Test
         put "A"
       end
       take :b do
-        convert { it * 2 }
+        convert { |v| v * 2 }
         put "B"
       end
     end
